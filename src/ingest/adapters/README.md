@@ -1,66 +1,80 @@
 # Retailer adapters
 
-One file per retailer, each implementing `RetailerAdapter`. The runner treats
-them as interchangeable and isolates their failures (R7).
+There are two kinds, because the retailers are two kinds. All four were read
+live on **4 November 2026**; no UK supermarket publishes a developer API, so
+each adapter reads the retailer's own front end the way the retailer's own
+browser does.
 
-## What each retailer actually looks like
-
-Observed live on **4 November 2026**. No UK supermarket publishes a developer
-API, so each of these is the retailer's own front end being read the way the
-retailer's own browser reads it.
-
-| Retailer | How its site gets prices | Barcode exposed? | Reachable with plain `fetch`? |
+| Retailer | How its site gets prices | Adapter kind | Barcode? |
 |---|---|---|---|
-| **Asda** | Algolia index `ASDA_PRODUCTS` — a JSON query, the cleanest of the four | No | **Yes** |
-| **Sainsbury's** | Server-rendered React; price lives in the DOM and in JSON-LD | No | No — needs a browser |
-| **Morrisons** | GraphQL via urql (`__URQL_DATA__`), plus JSON-LD; AWS WAF in front | Unknown | Unlikely |
-| **Tesco** | Server-rendered, consent wall before content, no exposed state | Unknown | No — needs a browser |
+| **Asda** | Algolia index `ASDA_PRODUCTS` — a JSON query | HTTP, `adapters/asda.ts` | No |
+| **Sainsbury's** | Server-rendered React, stable `data-testid` hooks | Browser, `browser/sainsburys.ts` | No |
+| **Morrisons** | GraphQL behind an AWS WAF, stable `data-test` hooks | Browser, `browser/morrisons.ts` | No |
+| **Tesco** | Server-rendered, consent wall, hashed class names | Browser, `browser/tesco.ts` | No |
 
-So there are two kinds of adapter, and only Asda is the easy kind:
+**No retailer publishes a barcode on a search tile.** Everything matches on
+brand + name + pack size against the confidence floor (R5). The EAN column in
+the catalogue is still worth keeping for a future source, but nothing fills it
+today.
 
-- **HTTP adapters** call a JSON endpoint and parse it. Cheap, fast, run
-  anywhere. Asda only.
-- **Browser adapters** would drive a real browser (Playwright), accept the
-  consent banner once, and read the rendered page. Needed for Sainsbury's and
-  Tesco, probably Morrisons. These cannot run in a serverless function; they
-  belong in the scheduled GitHub Actions job, which can run Playwright on the
-  free tier and write straight to Postgres.
+## HTTP adapters — `src/ingest/adapters/`
 
-That second kind is **not built yet** — it is an architecture decision, not a
-missing function. See `docs/TASKS.md`.
+Call a JSON endpoint, parse it, done. Cheap, fast, runs anywhere, including
+the `POST /api/cron/refresh` route. Asda only.
 
-## Status per adapter
+Asda notes that cost real debugging time:
 
-| File | Status |
-|---|---|
-| `asda.ts` | **Verified** against a live capture. Queries the same Algolia index the site does, reading the published app id and search-only key from the page config at run time. |
-| `sainsburys.ts` | **Unverified placeholder.** Targets the older `groceries-api` shape. The current site is server-rendered; treat this file as a sketch, not a working adapter. |
-| `morrisons.ts` | **Unverified placeholder.** The live site is GraphQL behind a WAF. |
-| `tesco.ts` | **Unverified placeholder.** The live site moved to `/shop/en-GB/search` behind a consent wall. |
+- Prices arrive as pounds (`3.94`) under `PRICES.EN.PRICE`.
+- Offer dates are unix seconds, and a far-future value is a "no end date"
+  sentinel. Mapped to null so the UI says "seen since" rather than printing a
+  date years out (R2).
+- Promotions are often multibuys ("Any 2 for £7"), recorded as `multibuy` and
+  never folded into a unit price.
+- The Algolia app id and search-only key are published in the page's own
+  `__CONFIG__.app.algolia` and rotate, so they are read at run time rather
+  than committed (R9).
 
-Only Asda should be enabled in production today.
+## Browser adapters — `src/ingest/browser/`
 
-## Notes that cost real debugging time
+Drive a real Chromium through Playwright, dismiss the consent wall, scroll the
+lazy-loaded grid, and read the rendered tiles. These cannot run in a
+serverless function, so they run in `.github/workflows/refresh-browser.yml`
+and write to Postgres directly.
 
-- **Asda publishes no EAN.** Nothing in the search index carries a barcode, so
-  Asda rows match on brand + name + pack size alone, against the confidence
-  floor. Do not assume EAN matching works everywhere (R5).
-- **Asda runs no shelf loyalty price**, which is why it is the clean baseline
-  when comparing against Clubcard or Nectar prices.
-- **Asda dates are unix seconds**, and a far-future value is a "no end date"
-  sentinel, not a real date. It is mapped to `null` so the UI falls back to
-  "seen since" rather than printing a date from 2031 (R2).
-- **Multibuys are not unit prices.** Asda returns promotions like "Any 2 for
-  £7". These are recorded as `multibuy` and never folded into a single-unit
-  price, because doing so understates the basket for anyone buying one.
-- **Credentials rotate.** The Algolia app id and search key are published in
-  the page's own config. They are read at run time, never committed (R9).
+Each one splits into two halves on purpose:
 
-## Adding or fixing one
+- `extract` runs **inside the page** and returns `ScrapedRow`s — plain strings,
+  no logic.
+- `parse(row)` is **pure**, and is unit-tested against text captured verbatim
+  from the live sites (`browser.test.ts`). When a retailer changes how a tile
+  reads, that test fails — which is the whole point, because the alternative
+  is shipping a wrong price quietly.
 
-1. Capture a real search response and save it to `fixtures/<slug>.json`.
-2. Write `parse()` against that fixture, with a test asserting the extracted
-   price, pack size, loyalty price and offer end date.
-3. Return `null` from `parse()` for anything you cannot read confidently — a
-   parked row beats a wrong price (R2).
-4. Register the adapter in `index.ts`.
+What each retailer gives up:
+
+| Retailer | Shelf price | Loyalty price | Offer end date |
+|---|---|---|---|
+| Sainsbury's | `gw-product-retail-price` | `gw-product-contextual-price`, only when `gw-nectar-offer-badge` is present | Rarely published |
+| Morrisons | `fop-price`, or `fop-original-price` when a More Card price is shown | "More Card" badge | Rarely published |
+| Tesco | the plain amount on the tile | the amount trailed by "Clubcard Price" | **Yes** — "valid for delivery from … until …" |
+
+Three traps that are handled and should stay handled:
+
+1. **Price elements contain the unit price.** Sainsbury's renders
+   `£3.90£2.35 / kg` in one node. Only the first amount is the price.
+2. **Multibuys are not unit prices.** "Any 2 for £7" and "Buy 3 for £4" are
+   detected and kept out of the price fields. Where a tile shows *only* a
+   multibuy and no single-unit price, `parse()` returns null rather than
+   guessing (R2).
+3. **A contextual price is not automatically a member price.** On Sainsbury's
+   it only counts as a Nectar price when the Nectar badge says so; otherwise
+   it is an ordinary promotion that everyone gets.
+
+## When one breaks
+
+It will. A parse-rate collapse shows up the same day on the Data page, via the
+`runs` table. The fix is usually: open the site, look at a tile, update the
+selector or the text pattern, and add the new wording to `browser.test.ts`.
+
+A `403` or `429` is taken at face value. The run records it, the store is
+marked stale, and we leave it alone (R6).

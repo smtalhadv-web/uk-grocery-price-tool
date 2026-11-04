@@ -51,18 +51,21 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] Matcher: EAN first, name+size fallback with confidence floor, unmatched queue
 - [x] Adapter: Asda — **verified live**, queries the site's own Algolia index
 - [x] Run reporter → `runs` table, surfaced on the Data page
+- [x] Decision taken: browser adapters, driven by Playwright in the Actions job
+- [x] Browser adapter framework — in-page `extract` + pure `parse`, so parsing
+      is unit-testable without a browser
+- [x] Adapter: Sainsbury's — verified live, Nectar price split from shelf
+- [x] Adapter: Morrisons — verified live, More Card price split from shelf
+- [x] Adapter: Tesco — verified live, Clubcard price and published end date
+- [x] Parser tests against text captured verbatim from all three live sites
 - [ ] Save the captured Asda response to `fixtures/asda.json` + a parser test
-- [ ] **Decide: build browser adapters (Playwright in the Actions job)?** The
-      live sites make this unavoidable for the other three — see
-      `src/ingest/adapters/README.md`
-- [ ] Adapter: Sainsbury's — server-rendered, needs a browser *(placeholder only)*
-- [ ] Adapter: Morrisons — GraphQL behind a WAF *(placeholder only)*
-- [ ] Adapter: Tesco — consent wall, needs a browser *(placeholder only)*
+- [ ] First real run against a live database (nothing has been run end to end yet)
 
 ## Milestone 5 — Automation
 
 - [x] `POST /api/cron/refresh` (bearer `CRON_SECRET`), 401 before any work
-- [x] GitHub Actions daily refresh workflow
+- [x] GitHub Actions daily refresh workflow (HTTP)
+- [x] GitHub Actions daily browser refresh workflow (Playwright)
 - [x] Data page with run report per retailer and the manual trigger command
 - [ ] `POST /api/cron/digest` + reminder workflow
 

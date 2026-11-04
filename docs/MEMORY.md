@@ -74,3 +74,40 @@ rendered page. That cannot run in a serverless function, so those adapters
 belong in the scheduled GitHub Actions job writing straight to Postgres —
 still free, but a second kind of adapter and a decision to take deliberately
 rather than drift into. Not built yet; recorded in TASKS.
+
+## 2026-11-04 — Browser adapters built, all four retailers verified
+
+Decision taken: the three retailers with no JSON endpoint get Playwright-driven
+adapters running in a scheduled GitHub Actions job, writing to Postgres
+directly. Serverless was never an option for them.
+
+Selectors confirmed on the live sites:
+
+- **Sainsbury's** — tile `[data-testid="gw-product-card"]`, name
+  `gw-product-name`, shelf `gw-product-retail-price`, member
+  `gw-product-contextual-price`, and `gw-nectar-offer-badge` is what makes a
+  contextual price a *Nectar* price rather than an ordinary promotion.
+- **Morrisons** — `fop-product-link`, `fop-title`, `fop-price`,
+  `fop-original-price`, `fop-price-per-unit`, plus an "Offer name: …" string
+  that carries multibuys. The grid lazy-loads, so the driver scrolls.
+- **Tesco** — no stable test ids at all, hashed class names. Parsed from the
+  tile's text instead, which is more durable here. Tesco is the only retailer
+  that publishes a real offer end date ("valid for delivery from … until …").
+
+**Nothing exposes a barcode on a search tile** — not one of the four. Matching
+is brand + name + pack size everywhere, carried entirely by the confidence
+floor. The EAN column stays for a future source but is unfilled today.
+
+Three parsing traps, all now covered by tests built from captured text:
+1. Price nodes contain the unit price glued on ("£3.90£2.35 / kg").
+2. Multibuys ("Any 2 for £7", "Buy 3 for £4") are not unit prices. Where a
+   tile shows only a multibuy, `parse()` returns null rather than guess.
+3. A contextual/discounted price is only a *member* price when the badge says
+   so; otherwise it is a promotion everyone gets.
+
+Structure that makes this maintainable: `extract` runs in the page and returns
+plain strings; `parse` is pure and unit-tested. A retailer changing their
+markup fails a test instead of shipping a wrong price.
+
+**Still not done:** nothing has run end to end against a real database. No
+Supabase project, no live run, no spot-check against the retailer sites.

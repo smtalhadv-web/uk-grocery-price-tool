@@ -150,12 +150,116 @@ async function writeObservation(
     });
 }
 
+export interface PersistCounts {
+  matched: number;
+  unmatched: number;
+  failed: number;
+}
+
+/**
+ * Matches a batch of normalised products to the catalogue and records their
+ * prices. Shared by the HTTP runner and the browser runner, so both go
+ * through the same matching rules and the same append-only write path.
+ */
+export async function persistProducts(args: {
+  slug: StoreSlug;
+  products: readonly NormalisedProduct[];
+}): Promise<PersistCounts> {
+  const { slug, products } = args;
+  const counts: PersistCounts = { matched: 0, unmatched: 0, failed: 0 };
+
+  const storeId = await storeIdFor(slug);
+  const catalogue = await candidates();
+
+  for (const item of products) {
+    const match = matchProduct(
+      {
+        ean: item.ean,
+        title: item.title,
+        brand: item.brand,
+        packQty: item.packQty,
+        packUnit: item.packUnit,
+      },
+      catalogue,
+    );
+
+    if (match.productId === null || match.method === null) {
+      counts.unmatched += 1;
+      await db()
+        .insert(schema.unmatched)
+        .values({ storeId, storeSku: item.storeSku, title: item.title, bestScore: match.score })
+        .onConflictDoNothing();
+      continue;
+    }
+
+    try {
+      const storeProductId = await upsertStoreProduct({
+        storeId,
+        productId: match.productId,
+        item,
+        method: match.method,
+        score: match.score,
+      });
+      await writeObservation(storeProductId, item);
+      counts.matched += 1;
+    } catch {
+      counts.failed += 1;
+    }
+  }
+
+  return counts;
+}
+
+/** The search terms a run should cover, taken from the catalogue itself. */
+export async function catalogueSearchTerms(): Promise<string[]> {
+  return searchTerms();
+}
+
+/** Opens a run row and returns its id, so a runner can close it later. */
+export async function openRun(slug: StoreSlug): Promise<{ runId: number; storeId: number }> {
+  const storeId = await storeIdFor(slug);
+  const [run] = await db()
+    .insert(schema.runs)
+    .values({ storeId, status: 'running' })
+    .returning({ id: schema.runs.id });
+  if (!run) throw new Error('could not open run');
+  return { runId: run.id, storeId };
+}
+
+export async function closeRun(runId: number, report: Omit<RunReport, 'storeSlug'>): Promise<void> {
+  await db()
+    .update(schema.runs)
+    .set({
+      finishedAt: new Date(),
+      fetched: report.fetched,
+      parsed: report.parsed,
+      matched: report.matched,
+      failed: report.failed,
+      status: report.status,
+      note: report.note,
+    })
+    .where(eq(schema.runs.id, runId));
+}
+
 /**
  * Refreshes one retailer. Never throws for an ordinary failure: the caller
  * runs the others regardless (R7).
  */
 export async function refreshStore(slug: StoreSlug): Promise<RunReport> {
   const adapter = adapterFor(slug);
+  if (!adapter) {
+    return {
+      storeSlug: slug,
+      fetched: 0,
+      parsed: 0,
+      matched: 0,
+      unmatched: 0,
+      failed: 0,
+      status: 'failed',
+      note: `${slug} has no HTTP adapter — it is refreshed by the browser job.`,
+    };
+  }
+
   const report: RunReport = {
     storeSlug: slug,
     fetched: 0,
@@ -276,9 +380,13 @@ export async function refreshStore(slug: StoreSlug): Promise<RunReport> {
   return report;
 }
 
-/** Refreshes every store, isolating each one from the others (R7). */
+/**
+ * Refreshes every store that has an HTTP adapter, isolating each from the
+ * others (R7). Retailers that need a browser are refreshed by the separate
+ * browser job — see scripts/refresh-browser.ts.
+ */
 export async function refreshAll(slugs?: readonly StoreSlug[]): Promise<RunReport[]> {
-  const targets = slugs ?? (['asda', 'morrisons', 'sainsburys', 'tesco'] as const);
+  const targets = slugs ?? (['asda'] as const);
   const reports: RunReport[] = [];
   for (const slug of targets) {
     reports.push(await refreshStore(slug));
