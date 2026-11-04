@@ -111,3 +111,39 @@ markup fails a test instead of shipping a wrong price.
 
 **Still not done:** nothing has run end to end against a real database. No
 Supabase project, no live run, no spot-check against the retailer sites.
+
+## 2026-11-04 — Moved to GitHub Pages
+
+The user asked about GitHub Pages. It is a good fit for this phase, with one
+real cost, so it was taken deliberately rather than drifted into.
+
+**Why it works here.** The data was already being produced by a scheduled
+Actions job. So the job now writes JSON into `public/data/` and commits it,
+the build renders every page from those files, and Pages serves the result.
+Hosting drops to zero, there is no database to operate, no connection string,
+no secret to guard — there is no public endpoint to protect — and the price
+history ends up versioned in git, which is free backup and a readable audit
+trail.
+
+**What it costs.** Accounts. A shared family list, reminder emails and price
+alerts all need a server, so Milestone 6 is blocked until we add a small
+Worker or go back to Vercel + Supabase. The Postgres schema and the Drizzle
+repository are deliberately left in the repo, still wired behind
+`DATA_SOURCE=db`, so that is a reconnection rather than a rewrite.
+
+**Consequences worth remembering:**
+- A static export cannot read `searchParams` on the server, so basket and
+  search moved to the client. They run the *same* pricing functions over the
+  same JSON — there is one set of arithmetic, not two.
+- The store filter on the deals feed became four real pages, `/store/<slug>`,
+  rather than a query parameter.
+- The product page shows the cheapest store's history rather than letting the
+  user switch, since switching was a query parameter too. Worth revisiting
+  with client-side state if it matters.
+- `prebuild` writes a fixtures dataset when none exists, flagged
+  `sample: true`, so a fresh clone is fully usable and the Data page says
+  loudly that the prices are not real.
+- The dataset is ~2MB for 40 products with 120 days of history. At 2,000
+  products that is closer to 100MB in the repo and growing daily — history
+  retention and per-product file splitting will need revisiting well before
+  then.

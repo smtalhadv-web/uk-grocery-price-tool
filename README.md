@@ -3,9 +3,16 @@
 Compare a whole shopping list across UK supermarkets: where it is cheapest
 today, what is on offer, and until when.
 
-**No AI anywhere.** Every figure on screen is arithmetic over stored prices.
-See [`docs/RULES.md`](docs/RULES.md) for the constraints this codebase holds to
-and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how it fits together.
+Two things shape this codebase:
+
+- **No AI anywhere.** Every figure on screen is arithmetic over stored prices.
+- **No server and no database.** The site is static files on GitHub Pages. A
+  scheduled GitHub Action scrapes the retailers, commits the prices as JSON,
+  and the site rebuilds itself. Hosting costs nothing and there is nothing to
+  keep running.
+
+See [`docs/RULES.md`](docs/RULES.md) for the constraints this holds to and
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how it fits together.
 
 ---
 
@@ -16,74 +23,68 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-It starts on `DATA_SOURCE=fixtures`: deterministic sample data, no database and
-no network. Every page works, so you can judge the product before any scraper
-is reliable. The Data page tells you which mode you are in.
+If no prices have been published yet, the first build writes a **sample**
+dataset from fixtures so every page works. The Data page says so in plain
+words — sample prices never pass for real ones.
 
 ```bash
-npm test           # unit tests
+npm test           # 90 unit tests
 npm run typecheck
-npm run build
+npm run build      # static export into out/
 ```
 
-## Run it against real prices
+## Fetch real prices
 
-1. Create a Postgres database (Supabase free tier is enough).
-2. `cp .env.example .env.local` and fill in `DATABASE_URL`, `CRON_SECRET` and
-   `FETCH_CONTACT_URL`. Set `DATA_SOURCE=db`.
-3. Create the tables and seed the catalogue:
+```bash
+npx playwright install chromium   # once
+npm run refresh:static            # all retailers
+npm run refresh:static -- asda    # one of them
+HEADED=1 npm run refresh:static -- tesco   # watch it work
+```
 
-   ```bash
-   npm run db:push
-   npm run db:seed
-   ```
+This writes `public/data/` — commit those files and the site redeploys.
 
-4. Fetch prices:
-
-   ```bash
-   npm run refresh              # all four retailers
-   npm run refresh -- asda      # one of them
-   ```
-
-**Before trusting a price:** the retailer adapters target each site's own JSON
-endpoints, and those endpoint shapes are **unverified** — no UK supermarket
-publishes a developer API, and this repo was built without access to the live
-sites. Read [`src/ingest/adapters/README.md`](src/ingest/adapters/README.md)
-and capture one real response per retailer before enabling any of them in
-production.
+**Why two kinds of adapter:** no UK supermarket publishes a developer API.
+Asda's site searches an Algolia index, so it can be read over plain HTTP.
+Sainsbury's, Morrisons and Tesco are server-rendered behind consent walls and
+bot protection, so they are read with a real browser. Details, including the
+parsing traps that cost real debugging time, are in
+[`src/ingest/adapters/README.md`](src/ingest/adapters/README.md).
 
 ## Deploy
 
-| Piece | Service | Notes |
-|---|---|---|
-| App | Vercel | Set the same env vars as `.env.local` |
-| Database | Supabase | Use the pooled connection string |
-| Schedule | GitHub Actions | `.github/workflows/refresh.yml`, daily 03:07 UTC |
+1. Push to `main`. The **Build and deploy to Pages** workflow runs.
+2. In the repository settings, under Pages, set the source to **GitHub
+   Actions**.
+3. The site lands at `https://<owner>.github.io/<repo>/`.
 
-The workflow needs two repository secrets: `APP_URL` (your deployed origin) and
-`CRON_SECRET` (the same value the app has). It calls
-`POST /api/cron/refresh`, which returns `207` when one retailer failed and the
-others updated — that is a success, not an outage (R7).
+Prices refresh themselves: **Refresh prices** runs daily at 03:17 UTC, commits
+the new JSON, and that commit triggers a redeploy. You can also run it by hand
+from the Actions tab, choosing which stores and how many items to cover.
+
+Nothing needs a secret. There is no public endpoint to protect, because there
+is no server.
 
 ## Layout
 
 ```
 docs/                PRD, architecture, rules, design, tasks, memory
-src/app/             Pages: deals, search, product, basket, admin, cron route
-src/components/      Shared UI
-src/data/            Catalogue, fixtures, repository (fixtures + Postgres)
-src/db/              Drizzle schema and client
-src/ingest/          Fetcher, normaliser, matcher, retailer adapters, runner
-src/lib/             Config, money, types, pricing engine
-scripts/             seed, refresh
+public/data/         the published dataset — the whole backend
+src/app/             pages: deals, store, product, basket, search, data
+src/components/      shared UI
+src/data/            catalogue, fixtures, JSON store, repositories
+src/ingest/          adapters (HTTP + browser), matcher, normaliser, publisher
+src/lib/             config, money, types, pricing engine
+src/db/              Postgres schema, unused today, kept for when accounts land
+scripts/             ensure-dataset, seed, refresh-static
 ```
 
 ## What it does not do
 
+- **No accounts.** A shared family list, reminder emails and price alerts all
+  need a server. They are deferred, not forgotten — see `docs/TASKS.md`.
 - No checkout. No supermarket offers an ordering API, so the app deep-links to
-  the retailer instead.
+  the retailer.
 - No full catalogue — a curated set of popular products.
 - No store-level or postcode-level pricing.
 - No Aldi, Lidl, Waitrose or Ocado yet.
-
-Deferred work is listed in [`docs/TASKS.md`](docs/TASKS.md).

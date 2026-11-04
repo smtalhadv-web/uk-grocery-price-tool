@@ -2,13 +2,14 @@
  * Runtime configuration. Every secret comes from the environment (R9).
  */
 
-export type DataSource = 'fixtures' | 'db';
+export type DataSource = 'static' | 'fixtures' | 'db';
 
 function readDataSource(): DataSource {
   const raw = process.env.DATA_SOURCE?.trim().toLowerCase();
   if (raw === 'db') return 'db';
-  if (raw === 'fixtures' || raw === undefined || raw === '') return 'fixtures';
-  throw new Error(`DATA_SOURCE must be "fixtures" or "db", got "${raw}"`);
+  if (raw === 'fixtures') return 'fixtures';
+  if (raw === 'static' || raw === undefined || raw === '') return 'static';
+  throw new Error(`DATA_SOURCE must be "static", "fixtures" or "db", got "${raw}"`);
 }
 
 export const config = {
@@ -35,6 +36,12 @@ export const config = {
 
   /** A price older than this is rendered as stale (R2). */
   staleAfterHours: Number(process.env.STALE_AFTER_HOURS ?? 36),
+
+  /**
+   * Path prefix the site is served under. GitHub Pages serves a project site
+   * at /<repo>, so every asset and data fetch needs it.
+   */
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH ?? '',
 } as const;
 
 export function requireDatabaseUrl(): string {

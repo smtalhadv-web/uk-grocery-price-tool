@@ -10,18 +10,18 @@ import { formatPence, unitPrice } from '@/lib/money';
 import { effectivePrice, goodTimeToBuy, lowestSeen, typicalPrice } from '@/lib/pricing';
 import type { StoreSlug } from '@/lib/types';
 
-export const dynamic = 'force-dynamic';
+/** Every tracked product gets its own page at build time. */
+export async function generateStaticParams() {
+  const repository = await repo();
+  const products = await repository.listProducts({ limit: 5000 });
+  return products.map((product) => ({ id: String(product.id) }));
+}
 
-export default async function ProductPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ basis?: string; store?: string }>;
-}) {
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const query = await searchParams;
-  const basis = parseBasis(query.basis);
+  // A static page has no query string to read, so the product page always
+  // shows both bases side by side rather than switching between them.
+  const basis = parseBasis(undefined);
   const productId = Number(id);
   if (!Number.isInteger(productId)) notFound();
 
@@ -52,7 +52,7 @@ export default async function ProductPage({
     });
 
   const best = rows.find((row) => row.value !== null) ?? null;
-  const chartStore = (query.store as StoreSlug | undefined) ?? best?.price.storeSlug ?? null;
+  const chartStore = best?.price.storeSlug ?? null;
   const chartHistory = chartStore
     ? history.filter((row) => row.storeSlug === chartStore)
     : [];
@@ -85,24 +85,9 @@ export default async function ProductPage({
             <h2 className="display m-0 text-xl">
               Price over the last 90 days{chartStore ? ` at ${storeName(chartStore)}` : ''}
             </h2>
-            <div className="flex flex-wrap gap-1.5">
-              {prices.map((price) => (
-                <Link
-                  key={price.storeSlug}
-                  href={`/product/${product.id}?store=${price.storeSlug}${
-                    basis === 'shelf' ? '&basis=shelf' : ''
-                  }`}
-                  aria-current={chartStore === price.storeSlug ? 'true' : undefined}
-                  className={`inline-flex min-h-11 items-center rounded-full border px-3.5 py-2 text-[13px] no-underline ${
-                    chartStore === price.storeSlug
-                      ? 'border-ink bg-ink font-semibold text-paper'
-                      : 'border-line bg-surface text-ink hover:border-ink'
-                  }`}
-                >
-                  {storeName(price.storeSlug)}
-                </Link>
-              ))}
-            </div>
+            <p className="m-0 text-[13px] text-ink-faint">
+              Cheapest store shown
+            </p>
           </div>
 
           <PriceChart history={chartHistory} basis={basis} days={90} />

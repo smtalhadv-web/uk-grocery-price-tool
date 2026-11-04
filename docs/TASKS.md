@@ -61,15 +61,29 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [ ] Save the captured Asda response to `fixtures/asda.json` + a parser test
 - [ ] First real run against a live database (nothing has been run end to end yet)
 
-## Milestone 5 — Automation
+## Milestone 5 — Automation and hosting
 
-- [x] `POST /api/cron/refresh` (bearer `CRON_SECRET`), 401 before any work
-- [x] GitHub Actions daily refresh workflow (HTTP)
-- [x] GitHub Actions daily browser refresh workflow (Playwright)
-- [x] Data page with run report per retailer and the manual trigger command
-- [ ] `POST /api/cron/digest` + reminder workflow
+Hosting decision: **GitHub Pages**, static. No server, no database, £0.
+Accounts are the price paid, and they were already a later phase.
 
-## Milestone 6 — Accounts and household
+- [x] Static export (`output: 'export'`), base path for a project site
+- [x] JSON dataset under `public/data/` — products, prices, per-product history
+- [x] Build-time rendering for deals, store and product pages
+- [x] Client-side basket and search, because a static export has no server to
+      read a query string — same pricing functions, run in the browser
+- [x] Sample dataset written on first build, flagged so it cannot pass for real
+- [x] `refresh.yml` — daily scrape, writes JSON, commits
+- [x] `deploy.yml` — builds and publishes to Pages on every push to main
+- [x] Data page showing the per-retailer run report and how to refresh by hand
+- [ ] Turn Pages on in repository settings (source: GitHub Actions)
+- [ ] First real refresh run
+
+## Milestone 6 — Accounts and household *(needs a server — blocked by the Pages choice)*
+
+Everything here needs something Pages cannot do. When it comes up, the options
+are a small Cloudflare Worker or going back to Vercel + Supabase; the Postgres
+schema and repository are still in the repo for exactly that.
+
 
 - [ ] Email magic-link auth
 - [ ] Household creation, invite link, member roles

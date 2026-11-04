@@ -1,51 +1,67 @@
-name: Daily price refresh
+name: Refresh prices
 
-# GitHub Actions rather than the host's scheduler: free, and not tied to a
-# hosting plan's cron limits.
+# Scrapes every retailer, writes the JSON under public/data and commits it.
+# The commit to main triggers the deploy workflow, so the site updates itself.
 on:
   schedule:
-    # 03:07 UTC — off the hour so we are not in the crowd at :00.
-    - cron: '7 3 * * *'
+    # 03:17 UTC — off the hour, so we are not in the crowd at :00.
+    - cron: '17 3 * * *'
   workflow_dispatch:
     inputs:
       stores:
-        description: 'Comma-separated store slugs (blank = all)'
+        description: 'Comma-separated slugs (blank = all)'
         required: false
         default: ''
+      terms:
+        description: 'How many catalogue items to cover'
+        required: false
+        default: '40'
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
 
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     steps:
-      - name: Trigger the refresh endpoint
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install the Chromium build Playwright expects
+        run: npx playwright install --with-deps chromium
+
+      - name: Scrape and publish
         env:
-          APP_URL: ${{ secrets.APP_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          STORES: ${{ github.event.inputs.stores }}
+          FETCH_CONTACT_URL: ${{ vars.FETCH_CONTACT_URL || 'https://github.com/smtalhadv-web/uk-grocery-price-tool' }}
+          # Slower than the local default: a scheduled job has all night (R6).
+          FETCH_DELAY_MS: '1500'
+          TERM_LIMIT: ${{ github.event.inputs.terms || '40' }}
+        # A retailer failing is not the job failing (R7) — the script exits
+        # non-zero only when every one of them failed.
+        run: npm run refresh:static -- "${{ github.event.inputs.stores }}"
+
+      - name: Commit the new prices
         run: |
           set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if [ -z "${APP_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
-            echo "APP_URL and CRON_SECRET must be set as repository secrets." >&2
-            exit 1
-          fi
-
-          url="${APP_URL%/}/api/cron/refresh"
-          if [ -n "${STORES:-}" ]; then
-            url="${url}?stores=${STORES}"
-          fi
-
-          status=$(curl -sS -o response.json -w '%{http_code}' \
-            -X POST "$url" \
-            -H "Authorization: Bearer ${CRON_SECRET}" \
-            --max-time 600)
-
-          echo "HTTP $status"
-          cat response.json
-
-          # 207 means at least one retailer failed but the others updated (R7).
-          if [ "$status" = "200" ] || [ "$status" = "207" ]; then
+          if git diff --quiet -- public/data; then
+            echo "No price changes today."
             exit 0
           fi
-          exit 1
+
+          git add public/data
+          git commit -m "data: price refresh $(date -u +%Y-%m-%d)"
+          git push

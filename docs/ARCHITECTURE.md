@@ -7,30 +7,71 @@ Last updated: 2026-11-04
 ## 1. Shape
 
 ```
-                    GitHub Actions (cron, daily 03:00 UTC)
-                                  │  POST /api/cron/refresh  (bearer CRON_SECRET)
-                                  ▼
-  retailer sites ──► fetchers ──► normaliser ──► matcher ──► Postgres
-                     (adapters)                              │
-                                                             ▼
-                              Next.js App Router  ──►  browser / PWA
-                              (server components read Postgres directly)
+                 GitHub Actions (cron, daily 03:17 UTC)
+                                │
+  retailer sites ──► adapters ──► matcher ──► public/data/*.json
+                     (HTTP + browser)              │
+                                                   │ git commit
+                                                   ▼
+                                        GitHub Actions (deploy)
+                                                   │ next build --output export
+                                                   ▼
+                                           GitHub Pages ──► browser
 ```
 
-No AI service anywhere. No third-party price API required. Every figure the user sees is arithmetic over rows in `price_observations`.
+**There is no server and no database.** The refresh job is the backend: it
+scrapes, matches, and commits JSON. The build renders every page from those
+files. Pages serves the result.
+
+No AI anywhere. Every figure is arithmetic over committed prices.
 
 ## 2. Stack
 
 | Layer | Choice | Why |
 |---|---|---|
-| App | Next.js 15, App Router, TypeScript | One deploy for UI + API + cron endpoint |
+| App | Next.js 15, App Router, `output: 'export'` | One toolchain for build-time pages and client-side ones |
 | Styling | Tailwind CSS | Matches the mockup system quickly |
-| DB | Postgres (Supabase free tier) | Relational price history, cheap |
-| ORM | Drizzle | Thin, typed, no heavy runtime |
-| Fetch | Node 22 `fetch` + `undici` | No browser needed for JSON endpoints |
-| Scheduler | GitHub Actions `schedule` | Free, outside the host's cron limits |
-| Deploy | Vercel | Free tier, zero-config for Next |
-| Email | Resend | Free tier for digests and alerts |
+| Data | JSON under `public/data/`, committed | No database to pay for or keep alive; history is versioned in git for free |
+| Fetch | Node 22 `fetch` (Asda) + Playwright (the rest) | Only Asda publishes usable JSON |
+| Scheduler | GitHub Actions | Free, and it is also where the scraping runs |
+| Hosting | GitHub Pages | Free, static, nothing to operate |
+
+### What this costs us
+
+Accounts. A static site cannot hold a shared family list, send a reminder
+email, or keep a per-user alert — all of those need a server. They are
+deliberately deferred (PRD §7); when they land, the Postgres schema and the
+Drizzle repository in `src/db/` and `src/data/repository.postgres.ts` are
+still here and still wired behind `DATA_SOURCE=db`.
+
+### Where a page is rendered
+
+| Page | Rendered | Why |
+|---|---|---|
+| Deals, store pages, product pages | Build time | Fixed content per deploy |
+| Basket, search | Browser | They read the query string, which a static export has no server to see. The basket lives in the URL so it stays shareable without an account |
+
+Both paths run the *same* pricing functions from `src/lib/pricing/`, over the
+same JSON. There is one set of arithmetic, not two.
+
+## 2b. The published dataset
+
+```
+public/data/
+  meta.json            generatedAt, per-retailer run report, sample flag
+  products.json        the catalogue
+  prices.json          today's price at every store, keyed by product id
+  history/<id>.json    that product's daily series, 120 days
+```
+
+`meta.sample` is true when the files came from fixtures rather than a real
+run, and the Data page says so loudly. Sample prices must never be able to
+pass for observed ones (R2).
+
+History is append-and-trim: one point per store per day holding that day's
+lowest, so re-running a refresh corrects the day rather than adding a second
+point. Git stores the diffs, so the price history is backed up and auditable
+without any extra machinery.
 
 ## 3. Data model
 
@@ -105,18 +146,22 @@ Every one of these is a documented formula in `lib/pricing/`. No model, no heuri
 
 ## 7. Environments
 
-| Mode | `DATA_SOURCE` | Use |
+| `DATA_SOURCE` | Reads from | Use |
 |---|---|---|
-| `fixtures` | local JSON under `fixtures/` | UI work with no DB and no network |
-| `db` | Postgres | Normal |
-
-This keeps the UI buildable and reviewable before any scraper is reliable.
+| `static` (default) | `public/data/` | Normal. Falls back to fixtures when no dataset has been published yet |
+| `fixtures` | generated in memory | UI work with nothing on disk |
+| `db` | Postgres | Kept for when accounts arrive; not used by the Pages build |
 
 ## 8. Scheduling
 
-`.github/workflows/refresh.yml` runs daily and calls `POST /api/cron/refresh` with `Authorization: Bearer $CRON_SECRET`. The route is a thin trigger: it enqueues the retailers and returns immediately, so it never hits a serverless timeout. A second workflow runs the reminder digest job.
+Two workflows, and no secret to guard because there is no public endpoint:
 
-An admin page exposes the same trigger with a button, which satisfies the "manual bhi ho, automate bhi ho" requirement.
+- `refresh.yml` — daily at 03:17 UTC. Scrapes, writes `public/data`, commits.
+  Also runnable by hand from the Actions tab, with inputs for which stores and
+  how many catalogue items to cover. That is the manual trigger.
+- `deploy.yml` — on every push to `main`. Builds the static export and
+  publishes it to Pages. The refresh commit triggers it, so the site updates
+  itself.
 
 ## 9. Risk register
 

@@ -6,10 +6,7 @@ import { repo } from '@/data/repository';
 import { basketHref, parseBasis } from '@/lib/basket-url';
 import { basketTotals } from '@/lib/pricing';
 import { formatPence } from '@/lib/money';
-import type { StoreSlug } from '@/lib/types';
 import { SearchBox } from './search-box';
-
-export const dynamic = 'force-dynamic';
 
 async function starterBasketPrices() {
   const repository = await repo();
@@ -31,20 +28,14 @@ async function starterBasketPrices() {
   );
 }
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ store?: string; basis?: string }>;
-}) {
-  const params = await searchParams;
-  const basis = parseBasis(params.basis);
-  const storeFilter = STORES.find((store) => store.slug === params.store)?.slug as
-    | StoreSlug
-    | undefined;
+export default async function HomePage() {
+  // A static export renders one page, so the deals feed is unfiltered and the
+  // store pills link to the per-store pages generated below.
+  const basis = parseBasis(undefined);
 
   const repository = await repo();
   const [deals, starters, lastRefresh] = await Promise.all([
-    repository.listDeals({ basis, limit: 12, store: storeFilter }),
+    repository.listDeals({ basis, limit: 12 }),
     starterBasketPrices(),
     repository.lastRefreshAt(),
   ]);
@@ -121,13 +112,13 @@ export default async function HomePage({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <StoreFilterLink label="All stores" href="/" active={!storeFilter} />
+            <StoreFilterLink label="All stores" href="/" active />
             {STORES.map((store) => (
               <StoreFilterLink
                 key={store.slug}
                 label={store.name}
-                href={`/?store=${store.slug}`}
-                active={storeFilter === store.slug}
+                href={`/store/${store.slug}`}
+                active={false}
               />
             ))}
           </div>

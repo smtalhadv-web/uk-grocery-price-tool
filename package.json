@@ -13,8 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx scripts/seed.ts",
-    "refresh": "tsx scripts/refresh.ts",
-    "refresh:browser": "tsx scripts/refresh-browser.ts"
+    "refresh:static": "tsx scripts/refresh-static.ts",
+    "prebuild": "tsx scripts/ensure-dataset.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.36.4",

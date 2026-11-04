@@ -126,10 +126,25 @@ async function postgresRepository(): Promise<Repository> {
   return new PostgresRepository();
 }
 
+/**
+ * Reads the committed JSON dataset. Falls back to fixtures when no dataset
+ * has been generated yet, so a fresh clone still runs — and the Data page
+ * says which of the two is in use, so sample prices are never mistaken for
+ * real ones (R2).
+ */
+async function staticRepository(): Promise<Repository> {
+  const { datasetExists } = await import('./json-store');
+  if (!datasetExists()) return new FixtureRepository();
+  const { StaticRepository } = await import('./repository.static');
+  return new StaticRepository();
+}
+
 let instance: Repository | null = null;
 
 export async function repo(): Promise<Repository> {
   if (instance) return instance;
-  instance = config.dataSource === 'db' ? await postgresRepository() : new FixtureRepository();
+  if (config.dataSource === 'db') instance = await postgresRepository();
+  else if (config.dataSource === 'fixtures') instance = new FixtureRepository();
+  else instance = await staticRepository();
   return instance;
 }
