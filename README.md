@@ -57,10 +57,23 @@ npm run refresh:local -- --no-push
 
 The push triggers a redeploy, so the site updates itself.
 
-To run it on a schedule, point Windows Task Scheduler (or `cron`) at
-`npm run refresh:local` in this folder, daily, whenever the machine is
-usually on. Missing a day is harmless — the site keeps the last price and
-marks it stale.
+To run it on a schedule, use **Windows Task Scheduler** with the batch file
+in this repo:
+
+| Field | Value |
+|---|---|
+| Program/script | `C:\path\to\repo\scripts\refresh-local.cmd` |
+| Start in | `C:\path\to\repo` |
+| Trigger | Daily, at a time the machine is usually on |
+
+Tick **Run task as soon as possible after a scheduled start is missed**, so a
+night with the machine off is picked up later. Output is appended to
+`refresh-local.log` in the repo folder.
+
+On macOS or Linux, point `cron` at `npm run refresh:local` in this folder.
+
+Missing a day is harmless — the site keeps the last price and marks it
+stale.
 
 A self-hosted GitHub runner would also solve the IP problem, but GitHub
 advises against one on a public repository: a fork's pull request can run

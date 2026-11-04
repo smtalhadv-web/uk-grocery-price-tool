@@ -232,3 +232,23 @@ So the refresh is split by where it can run:
 
 Not tried, and worth remembering as the paid escape hatch: a residential
 proxy (~$15–30/month) would put all four back in the cloud.
+
+## 2026-11-04 — Residential IP verified; scheduling stays on the user's machine
+
+Tested all three blocked retailers through the user's own Chrome, running the
+adapters' own extraction logic against live search pages:
+
+| Store | Tiles | Result |
+|---|---|---|
+| Sainsbury's | 30 | Nectar price correctly split (£5.00 shelf / £4.50 member) |
+| Morrisons | 10 | "was" price correctly read (£3.00 now / £3.90 was) |
+| Tesco | 55 | Clubcard price and multibuy both detected |
+
+No 403 anywhere. The selectors still hold and the IP is the only variable.
+
+**Claude's own scheduler cannot run this**, and that was checked rather than
+assumed: a scheduled task runs in Anthropic's cloud, which has the same
+datacentre-IP problem and cannot reach retailer domains at all, and the
+device bridge to the user's machine is not connected (no shell tool on it).
+Windows Task Scheduler is the right tool — no AI session, no cost, runs
+whenever the machine is on. Added `scripts/refresh-local.cmd` for it.
