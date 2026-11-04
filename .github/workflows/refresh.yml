@@ -1,0 +1,51 @@
+name: Daily price refresh
+
+# GitHub Actions rather than the host's scheduler: free, and not tied to a
+# hosting plan's cron limits.
+on:
+  schedule:
+    # 03:07 UTC — off the hour so we are not in the crowd at :00.
+    - cron: '7 3 * * *'
+  workflow_dispatch:
+    inputs:
+      stores:
+        description: 'Comma-separated store slugs (blank = all)'
+        required: false
+        default: ''
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Trigger the refresh endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          STORES: ${{ github.event.inputs.stores }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${APP_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "APP_URL and CRON_SECRET must be set as repository secrets." >&2
+            exit 1
+          fi
+
+          url="${APP_URL%/}/api/cron/refresh"
+          if [ -n "${STORES:-}" ]; then
+            url="${url}?stores=${STORES}"
+          fi
+
+          status=$(curl -sS -o response.json -w '%{http_code}' \
+            -X POST "$url" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            --max-time 600)
+
+          echo "HTTP $status"
+          cat response.json
+
+          # 207 means at least one retailer failed but the others updated (R7).
+          if [ "$status" = "200" ] || [ "$status" = "207" ]; then
+            exit 0
+          fi
+          exit 1
