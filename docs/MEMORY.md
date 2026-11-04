@@ -147,3 +147,33 @@ repository are deliberately left in the repo, still wired behind
   products that is closer to 100MB in the repo and growing daily — history
   retention and per-product file splitting will need revisiting well before
   then.
+
+## 2026-11-04 — First real refresh run failed; two bugs
+
+The scheduled job ran and failed in 41 seconds. Both causes were real, and
+neither could have been caught by the unit tests.
+
+**1. `__name is not defined`.** The TypeScript runner (tsx) compiles with
+esbuild's `keepNames`, which wraps every function in a `__name(...)` call.
+That helper exists in Node but not in the browser page, so any function handed
+to `page.evaluate` throws the moment it runs. Every browser adapter was dead
+on arrival. Fixed with an `addInitScript` that defines a no-op `__name` in the
+page, plus an immediate `evaluate` for the already-loaded page, since
+`addInitScript` only applies from the next navigation.
+
+**2. Asda returns 403 to datacentre IPs.** Their HTML sits behind a CDN that
+refuses CI runners, so reading the published Algolia config with a plain
+fetch fails — though the Algolia endpoint itself is happy to serve the same
+query the browser makes. Fixed by reading the config in a browser page once
+per run and handing it to the adapter via `setCredentials()`. Everything after
+that stays a cheap HTTP call.
+
+**3. Isolation was weaker than claimed.** `loadGrid` threw outside the
+per-term try, so one retailer's failure aborted the whole run instead of
+being recorded against that store (R7). Each store's scrape is now wrapped,
+and so is the scroll.
+
+**Caveat worth keeping in mind:** none of this could be verified locally —
+Playwright's Chromium download is blocked in the build sandbox, and the
+retailer domains are not reachable from it either. The fixes are standard, but
+the next run is the first real test of them.

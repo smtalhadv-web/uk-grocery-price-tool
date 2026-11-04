@@ -76,9 +76,30 @@ const AlgoliaCredentials = z.object({
   productsIndex: z.string().min(1),
 });
 
-type Credentials = z.infer<typeof AlgoliaCredentials>;
+export type Credentials = z.infer<typeof AlgoliaCredentials>;
 
 let cachedCredentials: Credentials | null = null;
+
+/**
+ * Supplies credentials fetched elsewhere.
+ *
+ * Asda's HTML is behind a CDN that refuses datacentre IPs — a plain fetch
+ * from a CI runner gets a 403 — but the Algolia endpoint itself is happy to
+ * serve the same request the browser makes. So the refresh job reads the
+ * config out of a real browser page and hands it over here, and everything
+ * after that stays a cheap HTTP call.
+ */
+export function setCredentials(value: Credentials): void {
+  cachedCredentials = value;
+}
+
+export const ASDA_CONFIG_URL = CONFIG_URL;
+
+/** Extracts the published Algolia config from a loaded Asda page. */
+export function parseAlgoliaConfig(value: unknown): Credentials | null {
+  const parsed = AlgoliaCredentials.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
 
 /**
  * Pulls the published Algolia app id, search-only key and index name out of
@@ -96,7 +117,11 @@ async function credentials(signal?: AbortSignal): Promise<Credentials> {
     },
   });
   if (!response.ok) {
-    throw new Error(`asda: could not load page config (HTTP ${response.status})`);
+    throw new Error(
+      `asda: could not load page config (HTTP ${response.status}). ` +
+        'From a datacentre IP this is expected — the refresh job reads the ' +
+        'config in a browser and calls setCredentials() instead.',
+    );
   }
 
   const html = await response.text();

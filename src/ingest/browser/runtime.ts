@@ -56,6 +56,27 @@ async function dismissConsent(page: Page): Promise<void> {
   }
 }
 
+/**
+ * The TypeScript runner compiles with esbuild's `keepNames`, which wraps every
+ * function in a `__name(...)` call. That helper exists in Node but not in the
+ * page, so a function handed to `page.evaluate` throws
+ * "__name is not defined" the moment it runs. Defining a no-op in the page
+ * before anything else loads is the smallest fix, and it survives navigation.
+ */
+async function shimKeepNames(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const scope = globalThis as unknown as Record<string, unknown>;
+    scope.__name ??= (fn: unknown) => fn;
+  });
+  // addInitScript only applies from the next navigation, so cover this page too.
+  await page
+    .evaluate(() => {
+      const scope = globalThis as unknown as Record<string, unknown>;
+      scope.__name ??= (fn: unknown) => fn;
+    })
+    .catch(() => undefined);
+}
+
 /** Grids lazy-load, so scroll until the row count stops growing. */
 async function loadGrid(page: Page, adapter: BrowserRetailerAdapter): Promise<void> {
   let previous = -1;
@@ -110,6 +131,7 @@ export async function scrapeWithBrowser(args: {
 
   const page = await context.newPage();
   page.setDefaultTimeout(NAV_TIMEOUT_MS);
+  await shimKeepNames(page);
 
   try {
     // Consent is per-context, so it only needs dismissing once per retailer.
@@ -142,7 +164,12 @@ export async function scrapeWithBrowser(args: {
         consentDone = true;
       }
 
-      await loadGrid(page, adapter);
+      try {
+        await loadGrid(page, adapter);
+      } catch (error) {
+        // Scrolling failing is not the run failing: extract what is on screen.
+        result.note = error instanceof Error ? error.message.slice(0, 160) : 'scroll failed';
+      }
 
       let rows: ScrapedRow[] = [];
       try {

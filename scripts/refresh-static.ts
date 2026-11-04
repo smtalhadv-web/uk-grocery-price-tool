@@ -13,7 +13,8 @@
 
 import { chromium, type Browser } from 'playwright';
 import { adapterFor } from '../src/ingest/adapters';
-import { BROWSER_SLUGS, browserAdapterFor } from '../src/ingest/browser';
+import { ASDA_CONFIG_URL, parseAlgoliaConfig, setCredentials } from '../src/ingest/adapters/asda';
+import { browserAdapterFor } from '../src/ingest/browser';
 import { scrapeWithBrowser } from '../src/ingest/browser/runtime';
 import {
   catalogueTerms,
@@ -29,6 +30,35 @@ const TERM_LIMIT = Number(process.env.TERM_LIMIT ?? 40);
 
 function now(): string {
   return new Date().toISOString();
+}
+
+/**
+ * Reads Asda's published Algolia config out of a real browser page.
+ *
+ * Their HTML is behind a CDN that refuses datacentre IPs, so a plain fetch
+ * from CI gets a 403 — but the Algolia endpoint serves us fine. One browser
+ * page load buys the whole HTTP path.
+ */
+async function primeAsdaCredentials(browser: Browser): Promise<string | null> {
+  const context = await browser.newContext({ locale: 'en-GB' });
+  const page = await context.newPage();
+  try {
+    await page.goto(ASDA_CONFIG_URL, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+    const raw = await page.evaluate(() => {
+      const config = (globalThis as unknown as { __CONFIG__?: { app?: { algolia?: unknown } } })
+        .__CONFIG__;
+      return config?.app?.algolia ?? null;
+    });
+    const credentials = parseAlgoliaConfig(raw);
+    if (!credentials) return 'Asda page loaded but the Algolia config was not in it.';
+    setCredentials(credentials);
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message.slice(0, 160) : 'could not read Asda config';
+  } finally {
+    await page.close().catch(() => undefined);
+    await context.close().catch(() => undefined);
+  }
 }
 
 async function runHttpStore(slug: StoreSlug, terms: readonly string[]) {
@@ -79,25 +109,45 @@ async function main() {
   const pricesBySlug = new Map<StoreSlug, ReadonlyMap<number, StorePrice>>();
   const runs: DatasetRun[] = [];
 
-  let browser: Browser | null = null;
-  const needsBrowser = slugs.some((slug) => BROWSER_SLUGS.includes(slug));
-  if (needsBrowser) {
-    browser = await chromium.launch({ headless: process.env.HEADED !== '1' });
+  // Asda needs a browser too, just for one page load, so always launch one.
+  const browser: Browser = await chromium.launch({
+    headless: process.env.HEADED !== '1',
+  });
+
+  let asdaNote: string | null = null;
+  if (slugs.includes('asda')) {
+    asdaNote = await primeAsdaCredentials(browser);
+    if (asdaNote) console.log(`asda          config   ${asdaNote}`);
   }
 
   try {
     for (const slug of slugs) {
       const usesBrowser = browserAdapterFor(slug) !== null;
 
-      const outcome =
-        usesBrowser && browser
+      // One retailer throwing must never end the run (R7).
+      let outcome: {
+        products: NormalisedProduct[];
+        fetched: number;
+        blocked: boolean;
+        note: string | null;
+      };
+      try {
+        outcome = usesBrowser
           ? await scrapeWithBrowser({ slug, terms, browser })
           : await runHttpStore(slug, terms);
+      } catch (error) {
+        outcome = {
+          products: [],
+          fetched: 0,
+          blocked: false,
+          note: error instanceof Error ? error.message.slice(0, 160) : 'scrape threw',
+        };
+      }
 
       const products = outcome.products;
       const fetched = outcome.fetched;
       const blocked = outcome.blocked;
-      let note = outcome.note;
+      let note = outcome.note ?? (slug === 'asda' ? asdaNote : null);
 
       const match = matchToCatalogue(products);
       pricesBySlug.set(slug, match.matched);
@@ -136,7 +186,7 @@ async function main() {
       );
     }
   } finally {
-    await browser?.close().catch(() => undefined);
+    await browser.close().catch(() => undefined);
   }
 
   const result = await publishDataset({ pricesBySlug, runs });
