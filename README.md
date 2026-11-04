@@ -35,10 +35,41 @@ npm run build      # static export into out/
 
 ## Fetch real prices
 
+Prices come from two places, because of where they can be fetched from.
+
+### Asda — automatic, in the cloud
+
+The scheduled **Refresh prices** workflow covers Asda daily and commits the
+result. Nothing to do.
+
+### Sainsbury's, Morrisons, Tesco — from your own machine
+
+These three answer GitHub's runner IPs with `403`: their CDNs refuse
+datacentre traffic. A home connection is an ordinary residential IP, so the
+same code works from a laptop.
+
 ```bash
 npx playwright install chromium   # once
-npm run refresh:static            # all retailers
-npm run refresh:static -- asda    # one of them
+npm run refresh:local             # scrape the three, commit, push
+npm run refresh:local -- tesco    # just one
+npm run refresh:local -- --no-push
+```
+
+The push triggers a redeploy, so the site updates itself.
+
+To run it on a schedule, point Windows Task Scheduler (or `cron`) at
+`npm run refresh:local` in this folder, daily, whenever the machine is
+usually on. Missing a day is harmless — the site keeps the last price and
+marks it stale.
+
+A self-hosted GitHub runner would also solve the IP problem, but GitHub
+advises against one on a public repository: a fork's pull request can run
+arbitrary code on it.
+
+### Everything at once, by hand
+
+```bash
+npm run refresh:static            # every retailer
 HEADED=1 npm run refresh:static -- tesco   # watch it work
 ```
 

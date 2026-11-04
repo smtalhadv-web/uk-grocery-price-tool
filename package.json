@@ -15,7 +15,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "refresh:static": "tsx scripts/refresh-static.ts",
     "prebuild": "tsx scripts/ensure-dataset.ts",
-    "predev": "tsx scripts/ensure-dataset.ts"
+    "predev": "tsx scripts/ensure-dataset.ts",
+    "refresh:local": "node scripts/refresh-local.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.36.4",

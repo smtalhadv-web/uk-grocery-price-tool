@@ -211,3 +211,24 @@ today". It now stages first and compares against the index.
 results. Some of that is genuine (not every item is stocked), but the
 confidence floor and the brand-less titles are the likely cause and the
 unmatched queue should be reviewed before widening the catalogue.
+
+## 2026-11-04 — Decision on the 403s: split the refresh
+
+Self-hosted runner was the first instinct and was **rejected**: the repo has
+to stay public for free Pages, and GitHub advises against self-hosted runners
+on public repositories because a fork's pull request can run arbitrary code
+on them. Making the repo private would need a paid plan for Pages, which
+defeats the point of the whole hosting choice.
+
+So the refresh is split by where it can run:
+
+- **Asda — cloud.** It passes from GitHub's runners, so the scheduled job now
+  covers Asda only, daily, and commits. Fully automatic, still free.
+- **Sainsbury's, Morrisons, Tesco — a home connection.** `npm run
+  refresh:local` scrapes those three, commits and pushes. Residential IP, so
+  the same code works. Can be put on Windows Task Scheduler. Missing a day is
+  harmless: the site keeps the last price and marks it stale, which is what
+  the staleness rule was for (R2).
+
+Not tried, and worth remembering as the paid escape hatch: a residential
+proxy (~$15–30/month) would put all four back in the cloud.

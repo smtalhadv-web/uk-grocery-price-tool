@@ -1,7 +1,16 @@
 name: Refresh prices
 
-# Scrapes every retailer, writes the JSON under public/data and commits it.
-# The commit to main triggers the deploy workflow, so the site updates itself.
+# Scrapes, writes the JSON under public/data and commits it. The commit to
+# main triggers the deploy workflow, so the site updates itself.
+#
+# The scheduled run covers ASDA ONLY. Sainsbury's, Morrisons and Tesco answer
+# GitHub's runner IP ranges with 403 — their CDNs refuse datacentre traffic.
+# Those three are refreshed from a home connection instead; see
+# `npm run refresh:local` and the README.
+#
+# A self-hosted runner would also solve the IP problem, but GitHub advises
+# against one on a public repository: a fork's pull request can run arbitrary
+# code on it. Not worth it for a price tracker.
 on:
   schedule:
     # 03:17 UTC — off the hour, so we are not in the crowd at :00.
@@ -9,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       stores:
-        description: 'Comma-separated slugs (blank = all)'
+        description: 'Comma-separated slugs (blank = asda only, which is all that works from CI)'
         required: false
         default: ''
       terms:
@@ -49,7 +58,7 @@ jobs:
           TERM_LIMIT: ${{ github.event.inputs.terms || '40' }}
         # A retailer failing is not the job failing (R7) — the script exits
         # non-zero only when every one of them failed.
-        run: npm run refresh:static -- "${{ github.event.inputs.stores }}"
+        run: npm run refresh:static -- "${{ github.event.inputs.stores || 'asda' }}"
 
       - name: Commit the new prices
         run: |
