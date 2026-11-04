@@ -47,13 +47,15 @@ async function withHostQueue<T>(host: string, task: () => Promise<T>): Promise<T
 export interface FetchJsonOptions {
   slug: StoreSlug;
   url: string;
+  method?: 'GET' | 'POST';
+  body?: string;
   headers?: Record<string, string>;
   signal?: AbortSignal;
   maxAttempts?: number;
 }
 
 export async function fetchJson<T = unknown>(options: FetchJsonOptions): Promise<T> {
-  const { slug, url, headers = {}, signal, maxAttempts = 3 } = options;
+  const { slug, url, method = 'GET', body, headers = {}, signal, maxAttempts = 3 } = options;
   const host = new URL(url).host;
 
   return withHostQueue(host, async () => {
@@ -65,6 +67,8 @@ export async function fetchJson<T = unknown>(options: FetchJsonOptions): Promise
       try {
         const response = await fetch(url, {
           signal,
+          method,
+          body,
           headers: {
             accept: 'application/json',
             'accept-language': 'en-GB,en;q=0.9',

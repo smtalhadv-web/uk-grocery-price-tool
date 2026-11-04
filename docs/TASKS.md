@@ -49,13 +49,15 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] Polite fetcher: per-host queue, jittered delay, backoff, honest UA
 - [x] Normaliser: price strings → pence, pack size → (qty, unit), dates
 - [x] Matcher: EAN first, name+size fallback with confidence floor, unmatched queue
-- [x] Adapter: Asda *(endpoint shape unverified)*
-- [x] Adapter: Morrisons *(endpoint shape unverified)*
-- [x] Adapter: Sainsbury's *(endpoint shape unverified)*
-- [x] Adapter: Tesco *(endpoint shape unverified)*
+- [x] Adapter: Asda — **verified live**, queries the site's own Algolia index
 - [x] Run reporter → `runs` table, surfaced on the Data page
-- [ ] **Capture one real response per retailer into `fixtures/<slug>.json`**
-- [ ] **Parser test per adapter against that captured response**
+- [ ] Save the captured Asda response to `fixtures/asda.json` + a parser test
+- [ ] **Decide: build browser adapters (Playwright in the Actions job)?** The
+      live sites make this unavoidable for the other three — see
+      `src/ingest/adapters/README.md`
+- [ ] Adapter: Sainsbury's — server-rendered, needs a browser *(placeholder only)*
+- [ ] Adapter: Morrisons — GraphQL behind a WAF *(placeholder only)*
+- [ ] Adapter: Tesco — consent wall, needs a browser *(placeholder only)*
 
 ## Milestone 5 — Automation
 

@@ -1,47 +1,137 @@
 import { z } from 'zod';
 import { fetchJson } from '../fetcher';
-import { normaliseEan, parsePackSize, toIsoDate, toPence } from '../normalise';
+import { parsePackSize, toPence } from '../normalise';
 import type { FetchOptions, NormalisedProduct, RawProduct, RetailerAdapter } from '../types';
 
 /**
- * Asda. No loyalty price layer on the shelf, so the shelf price is what
- * everyone pays — which makes it the clean baseline in a comparison.
- * Promotions appear as "Rollback".
+ * Asda.
  *
- * The response shape below is unverified against a live capture. See the
- * README in this folder before enabling it.
+ * Verified against a live capture on 2026-11-04 (see docs/MEMORY.md). Asda's
+ * site searches an Algolia index, `ASDA_PRODUCTS`, so this adapter queries the
+ * same index the website does rather than scraping the page.
+ *
+ * Two things that shape the code below:
+ *
+ * - **No barcode.** The index exposes no EAN, so Asda rows can only be matched
+ *   by brand + name + pack size. The confidence floor does the work (R5).
+ * - **No shelf loyalty price.** Asda runs no member price on the shelf, which
+ *   is exactly what makes it the clean baseline in a comparison.
+ *
+ * Credentials: the app id and the search-only key are published in the page's
+ * own `__CONFIG__.app.algolia`, and they rotate. They are read from the live
+ * page at run time rather than committed here — a copied key would be both a
+ * secret in the repo (R9) and a time bomb.
  */
 
-const AsdaItem = z.object({
-  id: z.union([z.string(), z.number()]),
-  name: z.string(),
-  brand: z.string().nullish(),
-  gtin: z.string().nullish(),
-  size: z.string().nullish(),
-  price: z
-    .object({
-      current: z.union([z.string(), z.number()]).nullish(),
-      was: z.union([z.string(), z.number()]).nullish(),
-    })
-    .nullish(),
-  promotion: z
-    .object({
-      type: z.string().nullish(),
-      endDate: z.string().nullish(),
-    })
-    .nullish(),
-  availability: z.string().nullish(),
-  slug: z.string().nullish(),
+const CONFIG_URL = 'https://www.asda.com/groceries';
+
+/** Unix seconds in the payload; anything else is not a date we will show (R2). */
+function fromUnixSeconds(value: unknown): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null;
+  const date = new Date(value * 1000);
+  if (Number.isNaN(date.getTime())) return null;
+  const year = date.getUTCFullYear();
+  // The feed uses a far-future sentinel for "no end date". Treat it as none.
+  if (year > new Date().getUTCFullYear() + 5) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+const AsdaPromo = z.object({
+  ID: z.union([z.string(), z.number()]).nullish(),
+  NAME: z.string().nullish(),
+  TYPE: z.number().nullish(),
+  START_DATE: z.number().nullish(),
+  END_DATE: z.number().nullish(),
 });
 
-const AsdaResponse = z.object({
-  data: z
+const AsdaHit = z.object({
+  objectID: z.union([z.string(), z.number()]),
+  CIN: z.union([z.string(), z.number()]).nullish(),
+  NAME: z.string(),
+  BRAND: z.string().nullish(),
+  PACK_SIZE: z.string().nullish(),
+  STATUS: z.string().nullish(),
+  PRICES: z
     .object({
-      items: z.array(z.unknown()).nullish(),
+      EN: z
+        .object({
+          PRICE: z.union([z.string(), z.number()]).nullish(),
+          OFFER: z.string().nullish(),
+          PRICEPERUOMFORMATTED: z.string().nullish(),
+        })
+        .nullish(),
     })
     .nullish(),
-  items: z.array(z.unknown()).nullish(),
+  PROMOS: z.object({ EN: z.array(AsdaPromo).nullish() }).nullish(),
+  STOCK: z.record(z.string(), z.number()).nullish(),
 });
+
+const AlgoliaResponse = z.object({
+  hits: z.array(z.unknown()).nullish(),
+});
+
+const AlgoliaCredentials = z.object({
+  appId: z.string().min(1),
+  searchAPIKey: z.string().min(1),
+  productsIndex: z.string().min(1),
+});
+
+type Credentials = z.infer<typeof AlgoliaCredentials>;
+
+let cachedCredentials: Credentials | null = null;
+
+/**
+ * Pulls the published Algolia app id, search-only key and index name out of
+ * the page config, the same values the browser uses. Cached for the process.
+ */
+async function credentials(signal?: AbortSignal): Promise<Credentials> {
+  if (cachedCredentials) return cachedCredentials;
+
+  const response = await fetch(CONFIG_URL, {
+    signal,
+    headers: {
+      accept: 'text/html',
+      'accept-language': 'en-GB,en;q=0.9',
+      'user-agent': 'TrolleywiseBot/0.1',
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`asda: could not load page config (HTTP ${response.status})`);
+  }
+
+  const html = await response.text();
+  const match = /"algolia"\s*:\s*(\{[^}]*\})/.exec(html);
+  if (!match?.[1]) {
+    throw new Error('asda: algolia config not found in the page — the site layout changed');
+  }
+
+  const parsed = AlgoliaCredentials.safeParse(JSON.parse(match[1]));
+  if (!parsed.success) {
+    throw new Error('asda: algolia config is not in the expected shape');
+  }
+
+  cachedCredentials = parsed.data;
+  return parsed.data;
+}
+
+/**
+ * Promotion types we can price. A multibuy ("Any 2 for £7") changes the price
+ * only if you buy the qualifying quantity, so it is recorded but never folded
+ * into a single-unit price — doing so would understate the basket (R2).
+ */
+function classifyPromo(
+  promos: z.infer<typeof AsdaPromo>[] | null | undefined,
+  offerFlag: string | null | undefined,
+): { kind: NormalisedProduct['offerKind']; endsOn: string | null } {
+  const promo = promos?.[0];
+  const name = (promo?.NAME ?? '').toLowerCase();
+  const endsOn = fromUnixSeconds(promo?.END_DATE);
+
+  if (/\bfor £|\bany \d|\d for \d/.test(name)) return { kind: 'multibuy', endsOn };
+  if ((offerFlag ?? '').toLowerCase().includes('rollback')) return { kind: 'rollback', endsOn };
+  if (promo) return { kind: 'shelf_offer', endsOn };
+  return { kind: 'shelf', endsOn: null };
+}
 
 export const asdaAdapter: RetailerAdapter = {
   slug: 'asda',
@@ -49,42 +139,75 @@ export const asdaAdapter: RetailerAdapter = {
   loyaltyScheme: null,
 
   async search(term, opts: FetchOptions = {}) {
-    const url = new URL('https://groceries.asda.com/api/items/search');
-    url.searchParams.set('keyword', term);
-    url.searchParams.set('limit', String(opts.limit ?? 24));
+    const { appId, searchAPIKey, productsIndex } = await credentials(opts.signal);
+    const url = `https://${appId}-dsn.algolia.net/1/indexes/${productsIndex}/query`;
 
-    const json = await fetchJson({ slug: 'asda', url: url.toString(), signal: opts.signal });
-    const parsed = AsdaResponse.safeParse(json);
+    const json = await fetchJson({
+      slug: 'asda',
+      url,
+      method: 'POST',
+      headers: {
+        'x-algolia-application-id': appId,
+        'x-algolia-api-key': searchAPIKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: term,
+        hitsPerPage: opts.limit ?? 12,
+        attributesToRetrieve: [
+          'CIN',
+          'NAME',
+          'BRAND',
+          'PACK_SIZE',
+          'STATUS',
+          'PRICES.EN',
+          'PROMOS.EN',
+          'STOCK',
+        ],
+      }),
+      signal: opts.signal,
+    });
+
+    const parsed = AlgoliaResponse.safeParse(json);
     if (!parsed.success) return [];
-    return parsed.data.data?.items ?? parsed.data.items ?? [];
+    return parsed.data.hits ?? [];
   },
 
   parse(raw: RawProduct): NormalisedProduct | null {
-    const result = AsdaItem.safeParse(raw);
+    const result = AsdaHit.safeParse(raw);
     if (!result.success) return null;
-    const item = result.data;
+    const hit = result.data;
 
-    const shelfPence = toPence(item.price?.current);
-    if (shelfPence === null) return null; // no readable price → park it (R2)
+    // The feed gives pounds as a number: 3.94 → 394p.
+    const shelfPence = toPence(hit.PRICES?.EN?.PRICE);
+    if (shelfPence === null) return null;
 
-    const pack = item.size ? parsePackSize(item.size) : null;
-    const isRollback = (item.promotion?.type ?? '').toLowerCase().includes('rollback');
+    const pack = hit.PACK_SIZE ? parsePackSize(hit.PACK_SIZE) : parsePackSize(hit.NAME);
+    const promo = classifyPromo(hit.PROMOS?.EN, hit.PRICES?.EN?.OFFER);
+    const sku = String(hit.CIN ?? hit.objectID);
+
+    // STOCK is keyed by depot id; any positive figure means it is orderable.
+    const stockValues = Object.values(hit.STOCK ?? {});
+    const inStock =
+      (hit.STATUS ?? 'A').toUpperCase() === 'A' &&
+      (stockValues.length === 0 || stockValues.some((value) => value > 0));
 
     return {
       storeSlug: 'asda',
-      storeSku: String(item.id),
-      storeUrl: `https://groceries.asda.com/product/${item.slug ?? item.id}`,
-      title: item.name,
-      brand: item.brand ?? null,
-      ean: normaliseEan(item.gtin),
-      packLabel: item.size ?? '',
+      storeSku: sku,
+      storeUrl: `https://www.asda.com/groceries/product/${sku}`,
+      title: hit.NAME,
+      brand: hit.BRAND ?? null,
+      // The index publishes no barcode, so Asda is matched on name + pack size.
+      ean: null,
+      packLabel: hit.PACK_SIZE ?? '',
       packQty: pack?.qty ?? null,
       packUnit: pack?.unit ?? null,
       shelfPence,
-      loyaltyPence: null, // Asda runs no shelf loyalty price
-      offerKind: isRollback ? 'rollback' : item.promotion ? 'shelf_offer' : 'shelf',
-      offerEndsOn: toIsoDate(item.promotion?.endDate),
-      inStock: (item.availability ?? 'A').toUpperCase() !== 'U',
+      loyaltyPence: null,
+      offerKind: promo.kind,
+      offerEndsOn: promo.endsOn,
+      inStock,
       raw,
     };
   },

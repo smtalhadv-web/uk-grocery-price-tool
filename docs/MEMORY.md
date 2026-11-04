@@ -29,3 +29,48 @@ Running record of decisions, findings and gotchas. Append, don't rewrite.
 **Open:** final product name. "Trolleywise" is a working title used throughout the mockups and code; not checked for availability or trademark.
 
 **Repo note.** The session's GitHub credential cannot create repositories, only push to ones already attached. The repo was created by hand on GitHub and then attached.
+
+## 2026-11-04 — Live reconnaissance of all four retailers
+
+Done through the user's own browser, since the build sandbox cannot reach
+retailer domains. This replaces the earlier "endpoint shapes unverified" note
+for Asda and sharpens it for the other three.
+
+**Asda — solved.** The site searches an Algolia index, `ASDA_PRODUCTS`. The
+adapter now queries the same index the browser does. Captured field shape:
+`CIN` (sku), `NAME`, `BRAND`, `PACK_SIZE` ("6X200G"), `STATUS`, `STOCK` (keyed
+by depot id), `PRICES.EN.{PRICE, OFFER, PRICEPERUOMFORMATTED}` with PRICE in
+pounds as a number, and `PROMOS.EN[]` with `NAME`, `TYPE`, `START_DATE`,
+`END_DATE` in unix seconds.
+
+Three things that matter:
+- **No EAN anywhere in the index.** Asda can only be matched on brand + name +
+  pack size. The assumption that EAN matching works for every retailer was
+  wrong.
+- **A far-future END_DATE is a sentinel**, not an offer end date. Mapped to
+  null so the UI says "seen since" instead of printing a date years out (R2).
+- **Promotions are often multibuys** ("Any 2 for £7"). Recorded as `multibuy`
+  and never folded into a unit price.
+
+The Algolia app id and search-only key are published in the page's own
+`__CONFIG__.app.algolia` and rotate, so the adapter reads them from the live
+page at run time rather than carrying a copied key in the repo (R9).
+
+**Sainsbury's — needs a browser.** Now server-rendered React; the old
+`groceries-api` path is not usable from the page. The PDP carries JSON-LD with
+sku and price but no EAN and no Nectar price. Shelf and Nectar prices are in
+the DOM under stable hooks (`data-testid="gw-product-price-container"`,
+`gw-product-retail-price`).
+
+**Morrisons — GraphQL behind a WAF.** Uses urql (`__URQL_DATA__`) plus
+`product-listing-structured-data` JSON-LD, with AWS WAF in front.
+
+**Tesco — hardest, as expected.** Moved to `/shop/en-GB/search`, shows a
+consent wall before content, and exposes no preloaded state.
+
+**Architecture consequence.** Only Asda works as a plain `fetch` adapter. The
+other three need a real browser (Playwright): accept consent once, read the
+rendered page. That cannot run in a serverless function, so those adapters
+belong in the scheduled GitHub Actions job writing straight to Postgres —
+still free, but a second kind of adapter and a decision to take deliberately
+rather than drift into. Not built yet; recorded in TASKS.
