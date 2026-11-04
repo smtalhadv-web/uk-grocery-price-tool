@@ -1,0 +1,402 @@
+[
+ {
+  "id": 1,
+  "ean": "5000436589127",
+  "name": "Semi-skimmed milk",
+  "brand": null,
+  "packLabel": "2 litres",
+  "packQty": 2000,
+  "packUnit": "ml",
+  "category": "Dairy"
+ },
+ {
+  "id": 2,
+  "ean": "5000436589134",
+  "name": "Whole milk",
+  "brand": null,
+  "packLabel": "2 litres",
+  "packQty": 2000,
+  "packUnit": "ml",
+  "category": "Dairy"
+ },
+ {
+  "id": 3,
+  "ean": "5000157024671",
+  "name": "Baked beans",
+  "brand": "Heinz",
+  "packLabel": "4 x 415g",
+  "packQty": 1660,
+  "packUnit": "g",
+  "category": "Store cupboard"
+ },
+ {
+  "id": 4,
+  "ean": "5000157063908",
+  "name": "Tomato ketchup",
+  "brand": "Heinz",
+  "packLabel": "700g",
+  "packQty": 700,
+  "packUnit": "g",
+  "category": "Store cupboard"
+ },
+ {
+  "id": 5,
+  "ean": "5740900403994",
+  "name": "Slightly salted butter",
+  "brand": "Lurpak",
+  "packLabel": "500g",
+  "packQty": 500,
+  "packUnit": "g",
+  "category": "Dairy"
+ },
+ {
+  "id": 6,
+  "ean": "5010029000016",
+  "name": "Toastie white loaf",
+  "brand": "Warburtons",
+  "packLabel": "800g",
+  "packQty": 800,
+  "packUnit": "g",
+  "category": "Bakery"
+ },
+ {
+  "id": 7,
+  "ean": "5000108000012",
+  "name": "Free range eggs",
+  "brand": null,
+  "packLabel": "12 pack",
+  "packQty": 12,
+  "packUnit": "item",
+  "category": "Dairy"
+ },
+ {
+  "id": 8,
+  "ean": "5000354922305",
+  "name": "Mature cheddar",
+  "brand": "Cathedral City",
+  "packLabel": "350g",
+  "packQty": 350,
+  "packUnit": "g",
+  "category": "Dairy"
+ },
+ {
+  "id": 9,
+  "ean": "5011013100248",
+  "name": "British chicken breast fillets",
+  "brand": null,
+  "packLabel": "650g",
+  "packQty": 650,
+  "packUnit": "g",
+  "category": "Meat & fish"
+ },
+ {
+  "id": 10,
+  "ean": "5000232889720",
+  "name": "Beef mince 5% fat",
+  "brand": null,
+  "packLabel": "500g",
+  "packQty": 500,
+  "packUnit": "g",
+  "category": "Meat & fish"
+ },
+ {
+  "id": 11,
+  "ean": "5000171011046",
+  "name": "Salmon fillets",
+  "brand": null,
+  "packLabel": "2 x 120g",
+  "packQty": 240,
+  "packUnit": "g",
+  "category": "Meat & fish"
+ },
+ {
+  "id": 12,
+  "ean": "5000354905209",
+  "name": "Basmati rice",
+  "brand": "Tilda",
+  "packLabel": "2kg",
+  "packQty": 2000,
+  "packUnit": "g",
+  "category": "Store cupboard"
+ },
+ {
+  "id": 13,
+  "ean": "8076809513722",
+  "name": "Penne pasta",
+  "brand": "Barilla",
+  "packLabel": "500g",
+  "packQty": 500,
+  "packUnit": "g",
+  "category": "Store cupboard"
+ },
+ {
+  "id": 14,
+  "ean": "5000127101001",
+  "name": "Corn flakes",
+  "brand": "Kellogg's",
+  "packLabel": "720g",
+  "packQty": 720,
+  "packUnit": "g",
+  "category": "Breakfast"
+ },
+ {
+  "id": 15,
+  "ean": "5010029217063",
+  "name": "Weetabix",
+  "brand": "Weetabix",
+  "packLabel": "48 pack",
+  "packQty": 48,
+  "packUnit": "item",
+  "category": "Breakfast"
+ },
+ {
+  "id": 16,
+  "ean": "5000147030279",
+  "name": "Non-bio washing pods",
+  "brand": "Fairy",
+  "packLabel": "38 washes",
+  "packQty": 38,
+  "packUnit": "item",
+  "category": "Household"
+ },
+ {
+  "id": 17,
+  "ean": "5410076700011",
+  "name": "Washing-up liquid",
+  "brand": "Fairy",
+  "packLabel": "870ml",
+  "packQty": 870,
+  "packUnit": "ml",
+  "category": "Household"
+ },
+ {
+  "id": 18,
+  "ean": "5000204546798",
+  "name": "Toilet tissue",
+  "brand": "Andrex",
+  "packLabel": "9 rolls",
+  "packQty": 9,
+  "packUnit": "item",
+  "category": "Household"
+ },
+ {
+  "id": 19,
+  "ean": "5000112637922",
+  "name": "Classic shampoo",
+  "brand": "Head & Shoulders",
+  "packLabel": "400ml",
+  "packQty": 400,
+  "packUnit": "ml",
+  "category": "Health & beauty"
+ },
+ {
+  "id": 20,
+  "ean": "5000174645446",
+  "name": "Toothpaste",
+  "brand": "Colgate",
+  "packLabel": "125ml",
+  "packQty": 125,
+  "packUnit": "ml",
+  "category": "Health & beauty"
+ },
+ {
+  "id": 21,
+  "ean": "5000295142053",
+  "name": "Bananas",
+  "brand": null,
+  "packLabel": "5 pack",
+  "packQty": 5,
+  "packUnit": "item",
+  "category": "Fruit & veg"
+ },
+ {
+  "id": 22,
+  "ean": "5000295142060",
+  "name": "Salad tomatoes",
+  "brand": null,
+  "packLabel": "6 pack",
+  "packQty": 6,
+  "packUnit": "item",
+  "category": "Fruit & veg"
+ },
+ {
+  "id": 23,
+  "ean": "5000295142077",
+  "name": "White potatoes",
+  "brand": null,
+  "packLabel": "2.5kg",
+  "packQty": 2500,
+  "packUnit": "g",
+  "category": "Fruit & veg"
+ },
+ {
+  "id": 24,
+  "ean": "5000295142084",
+  "name": "Brown onions",
+  "brand": null,
+  "packLabel": "1kg",
+  "packQty": 1000,
+  "packUnit": "g",
+  "category": "Fruit & veg"
+ },
+ {
+  "id": 25,
+  "ean": "5000295142091",
+  "name": "Carrots",
+  "brand": null,
+  "packLabel": "1kg",
+  "packQty": 1000,
+  "packUnit": "g",
+  "category": "Fruit & veg"
+ },
+ {
+  "id": 26,
+  "ean": "5000168203706",
+  "name": "Digestive biscuits",
+  "brand": "McVitie's",
+  "packLabel": "400g",
+  "packQty": 400,
+  "packUnit": "g",
+  "category": "Biscuits & snacks"
+ },
+ {
+  "id": 27,
+  "ean": "5000159461122",
+  "name": "Dairy Milk chocolate",
+  "brand": "Cadbury",
+  "packLabel": "180g",
+  "packQty": 180,
+  "packUnit": "g",
+  "category": "Biscuits & snacks"
+ },
+ {
+  "id": 28,
+  "ean": "5000328566498",
+  "name": "Tea bags",
+  "brand": "Yorkshire Tea",
+  "packLabel": "160 bags",
+  "packQty": 160,
+  "packUnit": "item",
+  "category": "Drinks"
+ },
+ {
+  "id": 29,
+  "ean": "5000354408113",
+  "name": "Instant coffee",
+  "brand": "Nescafé",
+  "packLabel": "200g",
+  "packQty": 200,
+  "packUnit": "g",
+  "category": "Drinks"
+ },
+ {
+  "id": 30,
+  "ean": "5449000000996",
+  "name": "Cola",
+  "brand": "Coca-Cola",
+  "packLabel": "6 x 330ml",
+  "packQty": 1980,
+  "packUnit": "ml",
+  "category": "Drinks"
+ },
+ {
+  "id": 31,
+  "ean": "5000436589141",
+  "name": "Orange juice, smooth",
+  "brand": "Tropicana",
+  "packLabel": "850ml",
+  "packQty": 850,
+  "packUnit": "ml",
+  "category": "Drinks"
+ },
+ {
+  "id": 32,
+  "ean": "5000436589158",
+  "name": "Greek style yogurt",
+  "brand": "Fage",
+  "packLabel": "500g",
+  "packQty": 500,
+  "packUnit": "g",
+  "category": "Dairy"
+ },
+ {
+  "id": 33,
+  "ean": "5000436589165",
+  "name": "Olive oil",
+  "brand": "Filippo Berio",
+  "packLabel": "500ml",
+  "packQty": 500,
+  "packUnit": "ml",
+  "category": "Store cupboard"
+ },
+ {
+  "id": 34,
+  "ean": "5000436589172",
+  "name": "Chopped tomatoes",
+  "brand": "Napolina",
+  "packLabel": "4 x 400g",
+  "packQty": 1600,
+  "packUnit": "g",
+  "category": "Store cupboard"
+ },
+ {
+  "id": 35,
+  "ean": "5000436589189",
+  "name": "Frozen garden peas",
+  "brand": "Birds Eye",
+  "packLabel": "800g",
+  "packQty": 800,
+  "packUnit": "g",
+  "category": "Frozen"
+ },
+ {
+  "id": 36,
+  "ean": "5000436589196",
+  "name": "Frozen chips",
+  "brand": "McCain",
+  "packLabel": "1.5kg",
+  "packQty": 1500,
+  "packUnit": "g",
+  "category": "Frozen"
+ },
+ {
+  "id": 37,
+  "ean": "5000436589202",
+  "name": "Fish fingers",
+  "brand": "Birds Eye",
+  "packLabel": "12 pack",
+  "packQty": 12,
+  "packUnit": "item",
+  "category": "Frozen"
+ },
+ {
+  "id": 38,
+  "ean": "5000436589219",
+  "name": "Kitchen roll",
+  "brand": "Plenty",
+  "packLabel": "4 rolls",
+  "packQty": 4,
+  "packUnit": "item",
+  "category": "Household"
+ },
+ {
+  "id": 39,
+  "ean": "5000436589226",
+  "name": "Bin liners, tie handle",
+  "brand": null,
+  "packLabel": "40 pack",
+  "packQty": 40,
+  "packUnit": "item",
+  "category": "Household"
+ },
+ {
+  "id": 40,
+  "ean": "5000436589233",
+  "name": "Nappies size 4",
+  "brand": "Pampers",
+  "packLabel": "46 pack",
+  "packQty": 46,
+  "packUnit": "item",
+  "category": "Baby"
+ }
+]

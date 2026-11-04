@@ -1,0 +1,37 @@
+{
+ "generatedAt": "2026-11-04T15:41:45.516Z",
+ "runs": [
+  {
+   "storeSlug": "sainsburys",
+   "status": "failed",
+   "fetched": 0,
+   "parsed": 0,
+   "matched": 0,
+   "unmatched": 0,
+   "note": "Blocked with HTTP 403 — left alone, store marked stale.",
+   "finishedAt": "2026-11-04T15:37:05.482Z"
+  },
+  {
+   "storeSlug": "morrisons",
+   "status": "partial",
+   "fetched": 330,
+   "parsed": 330,
+   "matched": 13,
+   "unmatched": 316,
+   "note": "Only 13 of 40 catalogue items matched.",
+   "finishedAt": "2026-11-04T15:41:42.304Z"
+  },
+  {
+   "storeSlug": "tesco",
+   "status": "failed",
+   "fetched": 0,
+   "parsed": 0,
+   "matched": 0,
+   "unmatched": 0,
+   "note": "Blocked with HTTP 403 — left alone, store marked stale.",
+   "finishedAt": "2026-11-04T15:41:44.937Z"
+  }
+ ],
+ "productCount": 40,
+ "sample": false
+}

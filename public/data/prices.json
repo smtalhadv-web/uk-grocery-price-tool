@@ -1,0 +1,184 @@
+{
+ "1": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "111659490",
+   "storeUrl": "https://groceries.morrisons.com/products/yeo-valley-organic-fresh-semi-skimmed-milk-2l/111659490",
+   "observedAt": "2026-11-04T15:41:42.289Z",
+   "shelfPence": 225,
+   "loyaltyPence": null,
+   "offerKind": "shelf_offer",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": "2026-11-04",
+   "inStock": true
+  }
+ ],
+ "3": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "100369227",
+   "storeUrl": "https://groceries.morrisons.com/products/heinz-baked-beans-4x415g/100369227",
+   "observedAt": "2026-11-04T15:41:42.290Z",
+   "shelfPence": 300,
+   "loyaltyPence": null,
+   "offerKind": "shelf_offer",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": "2026-11-04",
+   "inStock": true
+  }
+ ],
+ "4": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "100379249",
+   "storeUrl": "https://groceries.morrisons.com/products/heinz-tomato-ketchup-700g/100379249",
+   "observedAt": "2026-11-04T15:41:42.291Z",
+   "shelfPence": 390,
+   "loyaltyPence": null,
+   "offerKind": "multibuy",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": "2026-11-04",
+   "inStock": true
+  }
+ ],
+ "5": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "105831249",
+   "storeUrl": "https://groceries.morrisons.com/products/lurpak-slightly-salted-block-butter-500g/105831249",
+   "observedAt": "2026-11-04T15:41:42.293Z",
+   "shelfPence": 550,
+   "loyaltyPence": null,
+   "offerKind": "shelf",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": null,
+   "inStock": true
+  }
+ ],
+ "8": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "103128171",
+   "storeUrl": "https://groceries.morrisons.com/products/cathedral-city-british-extra-mature-cheddar-cheese-350g/103128171",
+   "observedAt": "2026-11-04T15:41:42.294Z",
+   "shelfPence": 375,
+   "loyaltyPence": null,
+   "offerKind": "shelf",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": null,
+   "inStock": true
+  }
+ ],
+ "10": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "107778007",
+   "storeUrl": "https://groceries.morrisons.com/products/morrisons-british-beef-steak-mince-5-fat-500g/107778007",
+   "observedAt": "2026-11-04T15:41:42.296Z",
+   "shelfPence": 505,
+   "loyaltyPence": null,
+   "offerKind": "shelf",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": null,
+   "inStock": true
+  }
+ ],
+ "13": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "111662672",
+   "storeUrl": "https://groceries.morrisons.com/products/barilla-pasta-penne-500g/111662672",
+   "observedAt": "2026-11-04T15:41:42.297Z",
+   "shelfPence": 140,
+   "loyaltyPence": null,
+   "offerKind": "shelf",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": null,
+   "inStock": true
+  }
+ ],
+ "15": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "100116271",
+   "storeUrl": "https://groceries.morrisons.com/products/weetabix-cereal-48-pack/100116271",
+   "observedAt": "2026-11-04T15:41:42.297Z",
+   "shelfPence": 450,
+   "loyaltyPence": null,
+   "offerKind": "shelf_offer",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": "2026-11-04",
+   "inStock": true
+  }
+ ],
+ "21": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "115455355",
+   "storeUrl": "https://groceries.morrisons.com/products/fyffes-bananas-5-pack/115455355",
+   "observedAt": "2026-11-04T15:41:42.298Z",
+   "shelfPence": 78,
+   "loyaltyPence": null,
+   "offerKind": "shelf",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": null,
+   "inStock": true
+  }
+ ],
+ "22": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "108389100",
+   "storeUrl": "https://groceries.morrisons.com/products/morrisons-salad-tomatoes-6-pack/108389100",
+   "observedAt": "2026-11-04T15:41:42.299Z",
+   "shelfPence": 99,
+   "loyaltyPence": null,
+   "offerKind": "shelf",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": null,
+   "inStock": true
+  }
+ ],
+ "23": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "108414361",
+   "storeUrl": "https://groceries.morrisons.com/products/morrisons-british-white-potatoes-2-5kg/108414361",
+   "observedAt": "2026-11-04T15:41:42.299Z",
+   "shelfPence": 165,
+   "loyaltyPence": null,
+   "offerKind": "shelf",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": null,
+   "inStock": true
+  }
+ ],
+ "24": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "108504753",
+   "storeUrl": "https://groceries.morrisons.com/products/morrisons-british-brown-onions-1kg/108504753",
+   "observedAt": "2026-11-04T15:41:42.299Z",
+   "shelfPence": 95,
+   "loyaltyPence": null,
+   "offerKind": "shelf",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": null,
+   "inStock": true
+  }
+ ],
+ "34": [
+  {
+   "storeSlug": "morrisons",
+   "storeSku": "100366747",
+   "storeUrl": "https://groceries.morrisons.com/products/napolina-chopped-tomatoes-in-a-rich-tomato-juice-4x400g/100366747",
+   "observedAt": "2026-11-04T15:41:42.302Z",
+   "shelfPence": 350,
+   "loyaltyPence": null,
+   "offerKind": "shelf",
+   "offerEndsOn": null,
+   "offerFirstSeenOn": null,
+   "inStock": true
+  }
+ ]
+}
