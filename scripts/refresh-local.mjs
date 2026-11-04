@@ -18,8 +18,17 @@ import { spawnSync } from 'node:child_process';
 
 const DEFAULT_STORES = 'sainsburys,morrisons,tesco';
 
+/**
+ * `npm` is a shell script on Windows and needs shell: true. `git` is a real
+ * executable and must NOT get it — with a shell, Windows re-splits the
+ * arguments on spaces, which tore a commit message into five bogus pathspecs.
+ */
+function needsShell(command) {
+  return process.platform === 'win32' && command === 'npm';
+}
+
 function run(command, args, { optional = false } = {}) {
-  const result = spawnSync(command, args, { stdio: 'inherit', shell: process.platform === 'win32' });
+  const result = spawnSync(command, args, { stdio: 'inherit', shell: needsShell(command) });
   if (result.status !== 0 && !optional) {
     console.error(`\n✗ ${command} ${args.join(' ')} failed.`);
     process.exit(result.status ?? 1);
@@ -28,7 +37,7 @@ function run(command, args, { optional = false } = {}) {
 }
 
 function capture(command, args) {
-  const result = spawnSync(command, args, { encoding: 'utf8', shell: process.platform === 'win32' });
+  const result = spawnSync(command, args, { encoding: 'utf8', shell: needsShell(command) });
   return (result.stdout ?? '').trim();
 }
 

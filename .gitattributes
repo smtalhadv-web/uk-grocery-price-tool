@@ -1,0 +1,12 @@
+# The published dataset is written with LF and committed from Windows, macOS
+# and CI alike. Without this, Windows checkouts rewrite every line and each
+# refresh shows the whole file as changed, which buries the actual price
+# diff — and the diff is how a wrong price gets noticed.
+public/data/** text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.cmd text eol=crlf
