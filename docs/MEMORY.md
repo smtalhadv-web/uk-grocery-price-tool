@@ -252,3 +252,38 @@ datacentre-IP problem and cannot reach retailer domains at all, and the
 device bridge to the user's machine is not connected (no shell tool on it).
 Windows Task Scheduler is the right tool — no AI session, no cost, runs
 whenever the machine is on. Added `scripts/refresh-local.cmd` for it.
+
+## 2026-11-04 — First real prices published
+
+The local run worked and the data is live: 13 products priced from Morrisons,
+committed and pushed. Sanity checks pass (2L milk £2.25, Heinz beans 4x415g
+£3.00 — the same price seen on their site by hand).
+
+**The IP theory was only half right.** From the user's home connection:
+
+| Store | Result |
+|---|---|
+| Morrisons | 330 found, 330 parsed — works |
+| Sainsbury's | 403 |
+| Tesco | 403 |
+
+So Morrisons accepts our honest `TrolleywiseBot` User-Agent and the other two
+refuse it, headed or not. It is not purely IP reputation. The remaining lever
+is dropping our self-identification, which is a decision for the user, not a
+silent change — it would mean being refused and then going in anyway. Asda +
+Morrisons both work honestly, so there is a real product either way.
+
+**A design choice that paid off:** `mergeStorePrices` preserves other
+retailers' rows, so the Asda cloud job and the Morrisons local job can write
+the same `prices.json` without clobbering each other. Confirmed by inspection.
+
+**Open: the match rate.** Morrisons returned 330 products and only 13 of 40
+catalogue items matched. Added `public/data/unmatched.json`, which now records
+near misses (score > 0.4) with their titles and scores, because the rate was
+otherwise undiagnosable. Review it after the next run before touching the
+confidence floor — lowering the floor to chase a number is how wrong prices
+get shipped.
+
+**Still outstanding:** the repo lives in `C:\Windows\System32` on the user's
+machine, which already broke a local ref update on push. It needs moving
+before Task Scheduler is set up.

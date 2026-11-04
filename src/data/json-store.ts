@@ -73,6 +73,15 @@ export async function listHistoryProductIds(): Promise<number[]> {
 
 /* ---------------------------------------------------------------- writing */
 
+/**
+ * The near misses from the last run — rows a retailer returned that did not
+ * clear the match floor. Not used by the site; it exists so a low match rate
+ * can be diagnosed instead of guessed at (R5).
+ */
+export async function writeUnmatched(rows: readonly unknown[]): Promise<void> {
+  await writeJson('unmatched.json', rows);
+}
+
 export async function writeMeta(meta: DatasetMeta): Promise<void> {
   await writeJson('meta.json', meta);
 }

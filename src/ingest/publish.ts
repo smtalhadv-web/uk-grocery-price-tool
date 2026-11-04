@@ -15,6 +15,7 @@ import {
   writeMeta,
   writePrices,
   writeProducts,
+  writeUnmatched,
 } from '@/data/json-store';
 import type { DatasetRun, PricesFile } from '@/data/dataset';
 import type { Product, StorePrice, StoreSlug } from '@/lib/types';
@@ -49,11 +50,21 @@ export function catalogueTerms(): string[] {
   return SEED_PRODUCTS.map((seed) => (seed.brand ? `${seed.brand} ${seed.name}` : seed.name));
 }
 
+export interface UnmatchedRow {
+  storeSlug: StoreSlug;
+  title: string;
+  /** The best score it managed against the catalogue, below the floor. */
+  bestScore: number;
+  packLabel: string;
+}
+
 export interface MatchOutcome {
   /** productId → the price to publish for that product at this store. */
   matched: Map<number, StorePrice>;
   matchedCount: number;
   unmatchedCount: number;
+  /** The near misses, kept so a low match rate can be diagnosed (R5). */
+  unmatched: UnmatchedRow[];
 }
 
 /**
@@ -66,6 +77,7 @@ export interface MatchOutcome {
 export function matchToCatalogue(products: readonly NormalisedProduct[]): MatchOutcome {
   const candidates = catalogueCandidates();
   const best = new Map<number, { price: StorePrice; effective: number }>();
+  const unmatched: UnmatchedRow[] = [];
   let unmatchedCount = 0;
 
   for (const item of products) {
@@ -87,6 +99,16 @@ export function matchToCatalogue(products: readonly NormalisedProduct[]): MatchO
 
     if (match.productId === null) {
       unmatchedCount += 1;
+      // Keep the near misses. A low match rate is otherwise invisible: you
+      // can see that 13 of 40 matched, but not why the other 27 did not.
+      if (match.score > 0.4) {
+        unmatched.push({
+          storeSlug: item.storeSlug,
+          title: item.title,
+          bestScore: Math.round(match.score * 100) / 100,
+          packLabel: item.packLabel,
+        });
+      }
       continue;
     }
 
@@ -112,10 +134,13 @@ export function matchToCatalogue(products: readonly NormalisedProduct[]): MatchO
     }
   }
 
+  unmatched.sort((a, b) => b.bestScore - a.bestScore);
+
   return {
     matched: new Map([...best].map(([id, entry]) => [id, entry.price])),
     matchedCount: best.size,
     unmatchedCount,
+    unmatched: unmatched.slice(0, 60),
   };
 }
 
@@ -179,8 +204,9 @@ export interface PublishResult {
 export async function publishDataset(args: {
   pricesBySlug: ReadonlyMap<StoreSlug, ReadonlyMap<number, StorePrice>>;
   runs: readonly DatasetRun[];
+  unmatched?: readonly UnmatchedRow[];
 }): Promise<PublishResult> {
-  const { pricesBySlug, runs } = args;
+  const { pricesBySlug, runs, unmatched = [] } = args;
 
   const products = catalogueProducts();
   await writeProducts(products);
@@ -195,6 +221,8 @@ export async function publishDataset(args: {
     const rows = prices[String(product.id)] ?? [];
     if (rows.length > 0) await appendHistory(product.id, rows);
   }
+
+  await writeUnmatched(unmatched);
 
   await writeMeta({
     generatedAt: new Date().toISOString(),

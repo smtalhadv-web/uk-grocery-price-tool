@@ -20,6 +20,7 @@ import {
   catalogueTerms,
   matchToCatalogue,
   publishDataset,
+  type UnmatchedRow,
 } from '../src/ingest/publish';
 import { AdapterBlockedError, type NormalisedProduct } from '../src/ingest/types';
 import type { DatasetRun } from '../src/data/dataset';
@@ -108,6 +109,7 @@ async function main() {
   const terms = catalogueTerms().slice(0, TERM_LIMIT);
   const pricesBySlug = new Map<StoreSlug, ReadonlyMap<number, StorePrice>>();
   const runs: DatasetRun[] = [];
+  const unmatched: UnmatchedRow[] = [];
 
   // Asda needs a browser too, just for one page load, so always launch one.
   const browser: Browser = await chromium.launch({
@@ -151,6 +153,7 @@ async function main() {
 
       const match = matchToCatalogue(products);
       pricesBySlug.set(slug, match.matched);
+      unmatched.push(...match.unmatched);
 
       let status: DatasetRun['status'] = 'ok';
       if (blocked) {
@@ -189,7 +192,7 @@ async function main() {
     await browser.close().catch(() => undefined);
   }
 
-  const result = await publishDataset({ pricesBySlug, runs });
+  const result = await publishDataset({ pricesBySlug, runs, unmatched });
   console.log(`\nPublished ${result.productCount} products to public/data.`);
 
   const anySucceeded = runs.some((run) => run.status !== 'failed');
