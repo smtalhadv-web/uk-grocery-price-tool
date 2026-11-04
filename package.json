@@ -14,7 +14,8 @@
     "db:push": "drizzle-kit push",
     "db:seed": "tsx scripts/seed.ts",
     "refresh:static": "tsx scripts/refresh-static.ts",
-    "prebuild": "tsx scripts/ensure-dataset.ts"
+    "prebuild": "tsx scripts/ensure-dataset.ts",
+    "predev": "tsx scripts/ensure-dataset.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.36.4",
