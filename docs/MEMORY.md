@@ -177,3 +177,37 @@ and so is the scroll.
 Playwright's Chromium download is blocked in the build sandbox, and the
 retailer domains are not reachable from it either. The fixes are standard, but
 the next run is the first real test of them.
+
+## 2026-11-04 — Second run: Asda works, the rest are IP-blocked
+
+Run #2 on the fixed code, 4m16s, reported green. Green only meant "not every
+retailer failed"; the real result is per store:
+
+| Store | Found | Parsed | Matched | Outcome |
+|---|---|---|---|---|
+| Asda | 419 | 419 | 22 / 40 | **ok** |
+| Morrisons | 142 | 142 | 8 | 403 partway through |
+| Sainsbury's | 0 | 0 | 0 | 403 immediately |
+| Tesco | 0 | 0 | 0 | 403 immediately |
+
+**Both earlier fixes worked.** Asda's browser-read Algolia credentials got
+419 results, and Morrisons parsed 142 tiles before being cut off, which only
+happens if the `__name` shim did its job.
+
+**The wall is IP reputation, not code.** GitHub Actions runners publish their
+IP ranges and the retailers' CDNs refuse them. This is exactly the risk
+flagged when the browser adapters were written, and it has landed. Nothing in
+the parsing can fix it. The options are a self-hosted runner on a home
+connection, a residential proxy (paid), running the scrape locally and
+committing, or shipping with Asda alone.
+
+**New bug found by the run, now fixed.** The commit step used
+`git diff --quiet -- public/data`, which reports no change for files git has
+never tracked. On the first run every data file is untracked, so the run that
+finally produced real prices committed nothing and said "No price changes
+today". It now stages first and compares against the index.
+
+**Also worth watching:** Asda matched only 22 of 40 catalogue items from 419
+results. Some of that is genuine (not every item is stocked), but the
+confidence floor and the brand-less titles are the likely cause and the
+unmatched queue should be reviewed before widening the catalogue.

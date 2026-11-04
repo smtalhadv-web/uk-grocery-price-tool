@@ -57,11 +57,16 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if git diff --quiet -- public/data; then
+          # Stage first, then compare against the index. `git diff` alone
+          # reports no change for files git has never seen, and on the first
+          # run every file under public/data is untracked — so the very run
+          # that creates the dataset would quietly commit nothing.
+          git add public/data
+
+          if git diff --cached --quiet -- public/data; then
             echo "No price changes today."
             exit 0
           fi
 
-          git add public/data
           git commit -m "data: price refresh $(date -u +%Y-%m-%d)"
           git push
