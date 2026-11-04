@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+
+/* Design tokens — see docs/DESIGN.md */
+@theme {
+  --color-paper: #faf9f5;
+  --color-surface: #ffffff;
+  --color-sunk: #f3f1ea;
+  --color-ink: #14211c;
+  --color-ink-muted: #3c4844;
+  --color-ink-faint: #5a6560;
+  --color-line: #e3e0d8;
+  --color-line-soft: #efede6;
+  --color-brand: #15694f;
+  --color-brand-deep: #0d4738;
+  --color-brand-tint: #e8f1ed;
+  --color-brand-tint-line: #c6ded4;
+  --color-brand-on-dark: #9fe0c6;
+  --color-save: #9c2f12;
+  --color-save-tint: #fbe9e2;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-paper);
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Visible focus for keyboard users — R11 */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
